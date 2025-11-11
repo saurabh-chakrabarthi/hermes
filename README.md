@@ -3,7 +3,8 @@
 The "Booking portal" is an application with the purpose of
 creating payment bookings. It consists on a payment form with the following structure:
 
-![alt tag](https://user-images.githubusercontent.com/34654846/37901679-4a71cd5a-30f2-11e8-83f2-d18ec3f594aa.png)
+<img width="1090" height="640" alt="image" src="https://github.com/user-attachments/assets/e3ad504a-1032-46c4-9d12-a682c1593409" />
+
 
 When the form is submitted, the application creates a payment record with the provided information.
 
@@ -32,4 +33,5 @@ As a final step, we add to the amount some fees depending on the magnitude of th
 
 Here you can see an example on how this information could be displayed:
 
-![alt tag](https://user-images.githubusercontent.com/34654846/37902217-fe20f97e-30f3-11e8-9594-fe4d611344b0.png)
+<img width="1324" height="491" alt="image" src="https://github.com/user-attachments/assets/c104bbaf-e399-41af-8c89-aaf1562726f6" />
+
