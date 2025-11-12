@@ -1,4 +1,26 @@
 /* Dashboard specific styles */
+
+/* Refresh controls */
+.refresh-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+#lastUpdated {
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
 .validation-message {
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
