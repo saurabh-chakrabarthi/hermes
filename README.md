@@ -1,7 +1,6 @@
-# Booking portal
+# Booking Portal
 
-The "Booking portal" is an application with the purpose of
-creating payment bookings. It consists on a payment form with the following structure:
+The **Booking Portal** is an application designed to facilitate payment bookings. It features a user-friendly payment form and a comprehensive client dashboard.
 
 ### Screens
 
@@ -25,84 +24,89 @@ creating payment bookings. It consists on a payment form with the following stru
   </tr>
 </table>
 
-When the form is submitted, the application creates a payment record with the provided information.
+When a form is submitted, the application creates a payment record with the provided information. The portal also exposes an API with two endpoints detailed in the [server README](server/README.md).
 
-This application also has an API consisting of 2 endpoints that are detailed on the [Readme](server/README.md).
+Inside the `client` directory, a second application interacts with the **Booking Portal** to enforce **quality checks** and additional rules:
 
-There's a second application, inside the ``client`` directory, that communicates with the "booking portal" application in order to accomplish the following:
+### Quality Check Rules
+- **InvalidEmail**: Flags payments with invalid email addresses.
+- **DuplicatedPayment**: Detects if a user already has an existing payment.
+- **AmountThreshold**: Flags payments exceeding $1,000,000.
 
-When a payment is booked, this payment has to go through a "quality check", the purpose of this quality check is to assure that the payment meets some defined "quality" criteria, this criteria consists on the following rules:
+The client also evaluates **over-payments** and **under-payments** based on the tuition amount defined in the portal:
 
-* **InvalidEmail**: The payment has an invalid email.
-* **DuplicatedPayment**: The user that booked the payment has already a payment in the system.
-* **AmountThreshold**: The amount of the payment is bigger than 1.000.000$
+- **Over-payment**: Payment exceeds tuition amount.
+- **Under-payment**: Payment is below tuition amount.
 
-The application shows if any of this "quality check" criteria are not met.
+### Fee Structure
+Applied based on the payment amount:
 
-Besides "quality check", it also checks for "over" and "under" payments [1]:
+- `< $1,000 USD`: 5% fee  
+- `$1,000 - $10,000 USD`: 3% fee  
+- `> $10,000 USD`: 2% fee  
 
-* An **over-payment** happens when the user pays more than the tuition amount we introduced in the booking portal.
-* An **under-payment** is just the opposite.
-
-As a final step, we add to the amount some fees depending on the magnitude of the amount, this fees are:
-
-* if the amount < 1000 USD: 5% fees
-* if the amount > 1000 USD AND < 10000 USD: 3% fees
-* if the amount > 10000 USD: 2% fees
+---
 
 ## Overview
 
-This code implements a Spring Boot client application that integrates with the existing booking portal to provide comprehensive payment quality checks, validation, and fee calculations as specified in the requirements.
+The client application is a **Spring Boot** service integrating with the **Booking Portal** to implement:
 
-## Implementation Approach
+- Payment quality checks  
+- Validation rules  
+- Fee calculations  
+- Dashboard visualization  
 
-### Architecture Decision: Spring Boot Architecture
+### Architecture
 
 **Why Spring Boot?**
-- **Rapid Development**: Built-in dependency injection, auto-configuration, and embedded server
-- **Production Ready**: Actuator for health checks, comprehensive testing support
-- **Integration Friendly**: Excellent REST client capabilities with WebClient
-- **Maintainable**: Clear separation of concerns with service layers
 
-**Clean Architecture Pattern:**
+- **Rapid Development**: Built-in DI, auto-configuration, embedded server  
+- **Production Ready**: Health checks with Actuator, robust testing support  
+- **Integration Friendly**: REST clients via WebClient  
+- **Maintainable**: Layered architecture  
+
+**Clean Architecture:**
+
 ```
-├── controller/     # Web layer (REST endpoints, UI)
-├── service/        # Business logic layer
-├── domain/         # Core business entities
-├── dto/           # Data transfer objects
-├── integration/   # External API integration
-└── config/        # Configuration classes
+├── controller/ # REST endpoints and UI controllers
+├── service/ # Business logic
+├── domain/ # Core entities
+├── dto/ # Data Transfer Objects
+├── integration/ # External API integrations
+└── config/ # Configuration classes
 ```
 
-### Key Technical Decisions
+**Key Technical Decisions:**
 
-1. **WebClient over RestTemplate**: Non-blocking, reactive HTTP client for better performance
-2. **Lombok**: Reduces boilerplate code while maintaining readability
-3. **Thymeleaf**: Server-side templating for the dashboard UI
-4. **Builder Pattern**: Immutable object creation for better code quality
-5. **Comprehensive Testing**: Unit tests, integration tests, and service layer tests
+1. **WebClient over RestTemplate** for non-blocking requests  
+2. **Lombok** to reduce boilerplate  
+3. **Thymeleaf** for dashboard templating  
+4. **Builder Pattern** for immutable objects  
+5. Comprehensive **unit & integration testing**  
 
-## Features Implemented
+---
 
-### Quality Check Rules
-- **Invalid Email**: Email validation using regex pattern
-- **Duplicate Payment**: Detects same email with different payment references
-- **Amount Threshold**: Flags payments exceeding $1,000,000
-- **Over/Under Payment**: Compares tuition amount vs amount received for over vs under payment
+## Features
 
-### Fee Calculation System
+### Quality Checks
+- Email validation using regex  
+- Duplicate payment detection  
+- Amount threshold check  
+- Over/under-payment comparison  
+
+### Fee Calculation
 ```java
-// Tiered fee structure implementation
+// Tiered fee implementation
 < $1,000:     5% fee
-$1,000-$10,000: 3% fee  
+$1,000-$10,000: 3% fee
 > $10,000:    2% fee
 ```
 
 ### Dashboard Interface
-- Real-time payment status visualization
-- Quality check results with color-coded badges
-- Fee calculations and final amounts
-- Refresh button and auto refresh logic to see new transactions
+- Real-time payment status
+- Color-coded badges for validation results
+- Fee calculation and final amount display
+- Manual and auto-refresh
 
 ### Docker Integration
 - Multi-stage Docker build for optimized image size
@@ -113,37 +117,37 @@ $1,000-$10,000: 3% fee
 ```
 client/
 ├── src/main/java/com/payment/client/
-│   ├── PaymentClientApplication.java      # Spring Boot entry point
+│   ├── PaymentClientApplication.java
 │   ├── controller/
-│   │   └── DashboardController.java       # Web UI controller
+│   │   └── DashboardController.java
 │   ├── service/
-│   │   ├── PaymentService.java           # Core business logic
-│   │   ├── PaymentValidationService.java # Validation rules
-│   │   ├── EmailValidationService.java   # Email validation
-│   │   └── DashboardService.java         # Dashboard data
+│   │   ├── PaymentService.java
+│   │   ├── PaymentValidationService.java
+│   │   ├── EmailValidationService.java
+│   │   └── DashboardService.java
 │   ├── domain/
-│   │   ├── Payment.java                  # Payment entity
-│   │   ├── PaymentValidationResult.java  # Validation results
-│   │   ├── FeeCalculation.java          # Fee calculation logic
-│   │   └── ValidationResult.java         # Individual validation
+│   │   ├── Payment.java
+│   │   ├── PaymentValidationResult.java
+│   │   ├── FeeCalculation.java
+│   │   └── ValidationResult.java
 │   ├── dto/
-│   │   ├── BookingDTO.java              # API data transfer
-│   │   ├── DashboardDTO.java            # Dashboard data
-│   │   └── PaymentDTO.java              # Payment display data
+│   │   ├── BookingDTO.java
+│   │   ├── DashboardDTO.java
+│   │   └── PaymentDTO.java
 │   ├── integration/
-│   │   ├── PaymentApiClient.java        # Booking portal client
-│   │   └── PaymentMapper.java           # Entity mapping
+│   │   ├── PaymentApiClient.java
+│   │   └── PaymentMapper.java
 │   └── config/
-│       ├── RestClientConfig.java        # WebClient configuration
-│       └── RulesConfig.java            # Validation rules config
-├── src/test/java/                       # Comprehensive test suite
+│       ├── RestClientConfig.java
+│       └── RulesConfig.java
+├── src/test/java/
 ├── src/main/resources/
-│   ├── templates/dashboard.html         # Thymeleaf template
-│   ├── static/css/dashboard.css         # Custom styles
-│   └── application.yml                  # Configuration
-├── docker-compose.yml                   # Multi-service orchestration
-├── Dockerfile                          # Multi-stage build
-└── pom.xml                            # Maven dependencies
+│   ├── templates/dashboard.html
+│   ├── static/css/dashboard.css
+│   └── application.yml
+├── docker-compose.yml
+├── Dockerfile
+└── pom.xml
 ```
 
 ## 🔧 Configuration & Deployment
@@ -153,10 +157,10 @@ client/
 # application.yml
 api:
   base-url: ${API_BASE_URL:http://localhost:9292}
-  
+
 server:
   port: 8080
-  
+
 management:
   endpoints:
     web:
