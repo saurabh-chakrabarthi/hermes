@@ -3,8 +3,27 @@
 The "Booking portal" is an application with the purpose of
 creating payment bookings. It consists on a payment form with the following structure:
 
-<img width="1090" height="640" alt="image" src="https://github.com/user-attachments/assets/e3ad504a-1032-46c4-9d12-a682c1593409" />
+### Screens
 
+<table>
+  <tr>
+    <td><strong>Landing Page</strong></td>
+    <td><strong>Payment Confirmation</strong></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/5b6cfde5-2ef5-4aff-a436-d2dcb2baea5d" width="350"/></td>
+    <td><img src="https://github.com/user-attachments/assets/0eb24d16-4eba-40e4-8845-a5dad75293d6" width="350"/></td>
+  </tr>
+
+  <tr>
+    <td colspan="2" align="center"><strong>Client Dashboard</strong></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="https://github.com/user-attachments/assets/b898dac3-268c-48c1-9e01-053a59aa526b" width="700"/>
+    </td>
+  </tr>
+</table>
 
 When the form is submitted, the application creates a payment record with the provided information.
 
@@ -84,9 +103,6 @@ $1,000-$10,000: 3% fee
 - Quality check results with color-coded badges
 - Fee calculations and final amounts
 - Refresh button and auto refresh logic to see new transactions
-
-<img width="1324" height="620" alt="image" src="https://github.com/user-attachments/assets/75fe112d-4a68-49f4-9373-8bfb460513c1" />
-
 
 ### Docker Integration
 - Multi-stage Docker build for optimized image size
@@ -250,8 +266,5 @@ This implementation provides a robust, production-ready solution that:
 **Maintainable**: Clean architecture, proper separation of concerns  
 **Scalable**: Stateless design, configurable components  
 **User Friendly**: Intuitive dashboard with clear visual indicators  
-
-
-<img width="1324" height="620" alt="image" src="https://github.com/user-attachments/assets/3eca4e23-9425-4ca1-8e60-5a9d2eb24d49" />
 
 
