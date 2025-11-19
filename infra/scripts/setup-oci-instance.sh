@@ -8,8 +8,14 @@ sudo apt update && sudo apt upgrade -y
 # Install Ruby 3 & dependencies
 sudo apt install -y ruby-full ruby-dev build-essential sqlite3 libsqlite3-dev git curl
 
-# Install bundler
-sudo gem install bundler
+# Configure gem installation to user directory
+echo 'export GEM_HOME="$HOME/.gem"' >> ~/.bashrc
+echo 'export PATH="$HOME/.gem/bin:$PATH"' >> ~/.bashrc
+export GEM_HOME="$HOME/.gem"
+export PATH="$HOME/.gem/bin:$PATH"
+
+# Install bundler to user directory
+gem install bundler
 
 # Ensure app directory exists
 sudo mkdir -p /home/ubuntu/payment-portal
@@ -21,6 +27,9 @@ if [ ! -d "/home/ubuntu/payment-portal/.git" ]; then
 fi
 
 cd /home/ubuntu/payment-portal/server
+
+# Configure bundler to install gems locally
+bundle config set --local path 'vendor/bundle'
 
 # Install gems
 bundle install || exit 1
@@ -40,7 +49,9 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/payment-portal/server
-ExecStart=/usr/bin/env bundle exec rackup config.ru -p 9292 -o 0.0.0.0
+Environment=GEM_HOME=/home/ubuntu/.gem
+Environment=PATH=/home/ubuntu/.gem/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/ubuntu/.gem/bin/bundle exec rackup config.ru -p 9292 -o 0.0.0.0
 Restart=always
 RestartSec=10
 
