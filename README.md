@@ -1,6 +1,6 @@
-# Booking Portal
+# Hermes Payment Portal
 
-The **Booking Portal** is an application designed to facilitate payment bookings. It features a user-friendly payment form and a comprehensive client dashboard.
+The **Hermes Payment Portal** is an application designed to facilitate payment bookings. It features a user-friendly payment form and a comprehensive client dashboard.
 
 ### Screens
 
@@ -26,7 +26,7 @@ The **Booking Portal** is an application designed to facilitate payment bookings
 
 When a form is submitted, the application creates a payment record with the provided information. The portal also exposes an API with two endpoints detailed in the [server README](server/README.md).
 
-Inside the `client` directory, a second application interacts with the **Booking Portal** to enforce **quality checks** and additional rules:
+Inside the `client` directory, a second application interacts with the **Hermes Payment Portal** to enforce **quality checks** and additional rules:
 
 ### Quality Check Rules
 - **InvalidEmail**: Flags payments with invalid email addresses.
@@ -49,7 +49,7 @@ Applied based on the payment amount:
 
 ## Overview
 
-The client application is a **Spring Boot** service integrating with the **Booking Portal** to implement:
+The client application is a **Spring Boot** service integrating with the **Hermes Payment Portal** to implement:
 
 - Payment quality checks  
 - Validation rules  
@@ -110,7 +110,7 @@ $1,000-$10,000: 3% fee
 
 ### Docker Integration
 - Multi-stage Docker build for optimized image size
-- Docker Compose orchestration with booking portal
+- Docker Compose orchestration with hermes portal
 
 ## 📁 Project Structure
 
@@ -175,7 +175,7 @@ docker-compose up --build
 
 # Access points:
 # - Client Dashboard: http://localhost:8080
-# - Booking Portal: http://localhost:9292
+# - Hermes Portal: http://localhost:9292
 ```
 
 ## Testing Strategy
@@ -226,7 +226,7 @@ Above Threshold
 
 ## API Integration
 
-### Booking Portal Integration
+### Hermes Portal Integration
 ```java
 @Component
 public class PaymentApiClient {

@@ -14,7 +14,7 @@ spring:
     encoding: UTF-8
 
 payment-server:
-  base-url: ${PAYMENT_SERVER_URL:http://localhost:3000}
+  base-url: ${PAYMENT_SERVER_URL:http://129.213.125.13:9292}
   api:
     health: /health
     bookings: /api/bookings

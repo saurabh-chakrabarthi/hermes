@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Portal</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Hermes Remittance Portal</h1>
+        <div class="card">
+            <h2>Dashboard</h2>
+            <div id="payments-container">
+                <p>Loading payments...</p>
+            </div>
+            <button onclick="refreshPayments()">Refresh</button>
+        </div>
+    </div>
+    
+    <script src="js/dashboard.js"></script>
+    <script>
+        // Override API base URL for GitHub Pages
+        window.API_BASE_URL = 'http://YOUR_ORACLE_VM_IP:9292';
+        loadPayments();
+    </script>
+</body>
+</html>

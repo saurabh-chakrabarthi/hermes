@@ -1,0 +1,6 @@
+# Override default values if needed
+# compartment_id = "your-compartment-ocid"
+# subnet_id = "your-subnet-ocid"
+# ssh_public_key = "your-ssh-public-key"
+# availability_domain = "your-availability-domain"
+# source_id = "your-image-ocid"
