@@ -1,41 +1,99 @@
-# Booking portal
+# Hermes Payment Server (Node.js)
 
-This application emulates the process of booking a payment.
+Modern Node.js payment server with Express, MySQL HeatWave, and Redis caching.
 
-## Requirements
-
- - Docker https://docs.docker.com/engine/installation/
- - Docker Compose https://docs.docker.com/compose/install/
-
-## Usage
-
-To boot up the application for development run:
+## Architecture
 
 ```
-$ docker-compose build
-$ docker-compose up
+┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Client UI     │    │   Node.js    │    │  OCI MySQL      │
+│   (Spring Boot) │◄──►│   Express    │◄──►│  HeatWave       │
+│                 │    │   Server     │    │                 │
+└─────────────────┘    └──────┬───────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │   Redis Cache   │
+                       │   (Sessions,    │
+                       │   Temp Data)    │
+                       └─────────────────┘
 ```
 
-The application will be available at http://localhost:9292 If for any reason you need the port to be different to 9292, you can change the port mapping in docker-compose.yml. For example to expose the application on port 8080 change `- 9292:9292` to `- 8080:9292`.
+## Features
 
-Warning: Mind that all state stored within the docker container is lost when the container is removed. That means that everytime you run a new container the database gets regenerated.
+- **Express.js** server with security middleware
+- **MySQL HeatWave** for persistent storage
+- **Redis** for caching and session management
+- **Rate limiting** and input validation
+- **Modern payment form** with Bootstrap UI
+- **RESTful API** endpoints
 
-The app has two interfaces, the web interface and the API.
+## API Endpoints
 
-### Web interface
+- `GET /health` - Health check
+- `GET /` - Redirect to payment form
+- `GET /payment` - Payment booking form
+- `POST /payment` - Process payment (form submission)
+- `GET /api/bookings` - Get all payments (JSON)
+- `POST /api/bookings` - Create payment (JSON API)
 
-Open on your browser
+## Environment Variables
 
+```bash
+PORT=80
+DB_HOST=mysql-host
+DB_USER=admin
+DB_PASSWORD=your-password
+DB_NAME=hermes_payments
+DB_PORT=3306
+REDIS_URL=redis://localhost:6379
+NODE_ENV=production
 ```
-http://localhost:9292/payment
+
+## Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Copy environment file
+cp .env.example .env
+
+# Start server
+npm start
+
+# Development with auto-reload
+npm run dev
 ```
 
-### API
+## Database Schema
 
+```sql
+CREATE TABLE payments (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  school VARCHAR(100),
+  student_id VARCHAR(50),
+  country_from VARCHAR(50),
+  sender_address TEXT,
+  currency_from VARCHAR(3) DEFAULT 'usd',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
-$ curl http://localhost:9292/api
-{"message":"Hello Developer"}
 
-$ curl http://localhost:9292/api/bookings
-{"bookings":[{"reference":"some reference","amount":10000,"amount_received":10000,"country_from":"ES","sender_full_name":"Name","sender_address":"Address","school":"School","currency_from":"USD","student_id":123456,"email":"some@example.com"}]}
-```
+## Caching Strategy
+
+- **Payment List**: Cached for 5 minutes
+- **Cache Invalidation**: On new payment creation
+- **Redis Keys**: `payments:all`
+
+## Security Features
+
+- Helmet.js for security headers
+- Rate limiting (100 requests per 15 minutes)
+- Input validation with Joi
+- CORS enabled
+- SQL injection protection with prepared statements

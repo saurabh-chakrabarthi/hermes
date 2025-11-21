@@ -19,25 +19,25 @@ public class BookingDTO {
     @JsonProperty("amount")
     private BigDecimal amount;
 
-    @JsonProperty("amount_received")
+    @JsonProperty("amountReceived")
     private BigDecimal amountReceived;
 
-    @JsonProperty("country_from")
+    @JsonProperty("countryFrom")
     private String countryFrom;
 
-    @JsonProperty("sender_full_name")
+    @JsonProperty("senderFullName")
     private String senderFullName;
 
-    @JsonProperty("sender_address")
+    @JsonProperty("senderAddress")
     private String senderAddress;
 
     @JsonProperty("school")
     private String school;
 
-    @JsonProperty("currency_from")
+    @JsonProperty("currencyFrom")
     private String currencyFrom;
 
-    @JsonProperty("student_id")
+    @JsonProperty("studentId")
     private String studentId;
 
     @JsonProperty("email")

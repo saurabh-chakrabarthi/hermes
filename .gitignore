@@ -1,12 +1,40 @@
-*.sw[a-z]
-*.sqlite3
-*.DS_Store
-*.class
-/build/
-/bin/
-/out/
+# Dependencies
+node_modules/
 target/
-/client/build/
-/client/target/*
-.idea/
+
+# Environment files
+.env
+*.env
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+
+# Test reports
+surefire-reports/

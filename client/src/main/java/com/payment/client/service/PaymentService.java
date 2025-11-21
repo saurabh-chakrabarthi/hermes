@@ -47,13 +47,15 @@ public class PaymentService {
         FeeCalculation feeCalculation = FeeCalculation.calculate(bookingDTO.getAmount());
         
         // Determine payment status
-        String paymentStatus;
-        if (bookingDTO.getAmount().equals(bookingDTO.getAmountReceived())) {
-            paymentStatus = "EXACT";
-        } else if (bookingDTO.getAmountReceived().compareTo(bookingDTO.getAmount()) > 0) {
-            paymentStatus = "OVERPAYMENT";
-        } else {
-            paymentStatus = "UNDERPAYMENT";
+        String paymentStatus = "UNKNOWN";
+        if (bookingDTO.getAmount() != null && bookingDTO.getAmountReceived() != null) {
+            if (bookingDTO.getAmount().equals(bookingDTO.getAmountReceived())) {
+                paymentStatus = "EXACT";
+            } else if (bookingDTO.getAmountReceived().compareTo(bookingDTO.getAmount()) > 0) {
+                paymentStatus = "OVERPAYMENT";
+            } else {
+                paymentStatus = "UNDERPAYMENT";
+            }
         }
 
         return PaymentValidationResult.builder()

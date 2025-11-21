@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8080
   servlet:
     context-path: /
 
@@ -14,7 +14,7 @@ spring:
     encoding: UTF-8
 
 payment-server:
-  base-url: ${PAYMENT_SERVER_URL:http://localhost:80}
+  base-url: ${PAYMENT_SERVER_URL:http://localhost:3000}
   api:
     health: /health
     bookings: /api/bookings

@@ -1,79 +1,267 @@
-provider "oci" {}
+terraform {
+  required_providers {
+    oci = {
+      source  = "oracle/oci"
+      version = "~> 5.0"
+    }
+  }
+}
 
-resource "oci_core_instance" "generated_oci_core_instance" {
-	agent_config {
-		is_management_disabled = "false"
-		is_monitoring_disabled = "false"
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Vulnerability Scanning"
-		}
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Management Agent"
-		}
-		plugins_config {
-			desired_state = "ENABLED"
-			name = "Custom Logs Monitoring"
-		}
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Compute RDMA GPU Monitoring"
-		}
-		plugins_config {
-			desired_state = "ENABLED"
-			name = "Compute Instance Monitoring"
-		}
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Compute HPC RDMA Auto-Configuration"
-		}
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Compute HPC RDMA Authentication"
-		}
-		plugins_config {
-			desired_state = "ENABLED"
-			name = "Cloud Guard Workload Protection"
-		}
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Block Volume Management"
-		}
-		plugins_config {
-			desired_state = "DISABLED"
-			name = "Bastion"
-		}
-	}
-	availability_config {
-		recovery_action = "RESTORE_INSTANCE"
-	}
-	availability_domain = var.availability_domain
-	compartment_id = var.compartment_id
-	create_vnic_details {
-		assign_ipv6ip = "false"
-		assign_private_dns_record = "true"
-		assign_public_ip = "true"
-		subnet_id = var.subnet_id
-	}
-	display_name = "hermes-payment-portal-server"
-	instance_options {
-		are_legacy_imds_endpoints_disabled = "false"
-	}
-	is_pv_encryption_in_transit_enabled = "true"
-	metadata = {
-		"ssh_authorized_keys" = var.ssh_public_key
-		"user_data" = "I2Nsb3VkLWNvbmZpZwpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IHRydWUKCnBhY2thZ2VzOgogIC0gcnVieQogIC0gcnVieS1kZXYKICAtIGJ1aWxkLWVzc2VudGlhbAogIC0gc3FsaXRlMwogIC0gbGlic3FsaXRlMy1kZXYKICAtIGdpdAoKcnVuY21kOgogIC0gZ2VtIGluc3RhbGwgYnVuZGxlcgogIC0gbWtkaXIgLXAgL2hvbWUvdWJ1bnR1L3BheW1lbnQtcG9ydGFsCiAgLSBjaG93biB1YnVudHU6dWJ1bnR1IC9ob21lL3VidW50dS9wYXltZW50LXBvcnRhbAogIC0gc3VkbyAtdSB1YnVudHUgZ2l0IGNsb25lIGh0dHBzOi8vZ2l0aHViLmNvbS9zYXVyYWJoLWNoYWtyYWJhcnRoaS9oZXJtZXMuZ2l0IC9ob21lL3VidW50dS9wYXltZW50LXBvcnRhbAogIC0gY2QgL2hvbWUvdWJ1bnR1L3BheW1lbnQtcG9ydGFsL3NlcnZlciAmJiBzdWRvIC11IHVidW50dSBidW5kbGUgaW5zdGFsbAogIC0gY2QgL2hvbWUvdWJ1bnR1L3BheW1lbnQtcG9ydGFsL3NlcnZlciAmJiBzdWRvIC11IHVidW50dSBidW5kbGUgZXhlYyByYWtlIGRiOmNyZWF0ZSBkYjptaWdyYXRlCiAgLSBjcCAvaG9tZS91YnVudHUvcGF5bWVudC1wb3J0YWwvaW5mcmEvc2NyaXB0cy9wYXltZW50LXNlcnZlci5zZXJ2aWNlIC9ldGMvc3lzdGVtZC9zeXN0ZW0vCiAgLSBzeXN0ZW1jdGwgZGFlbW9uLXJlbG9hZAogIC0gc3lzdGVtY3RsIGVuYWJsZSBwYXltZW50LXNlcnZlcgogIC0gc3lzdGVtY3RsIHN0YXJ0IHBheW1lbnQtc2VydmVyCiAgLSB1ZncgYWxsb3cgOTI5MgogIC0gZWNobyAiU2V0dXAgY29tcGxldGUhIFNlcnZlciBydW5uaW5nIG9uIHBvcnQgOTI5MiIgPiAvaG9tZS91YnVudHUvc2V0dXAtY29tcGxldGUubG9n"
-	}
-	shape = "VM.Standard.A1.Flex"
-	shape_config {
-		memory_in_gbs = "24"
-		ocpus = "4"
-	}
-	source_details {
-		boot_volume_size_in_gbs = "50"
-		boot_volume_vpus_per_gb = "10"
-		source_id = var.source_id
-		source_type = "image"
-	}
+provider "oci" {
+  region              = var.region
+  user_ocid           = var.user_ocid
+  fingerprint         = var.fingerprint
+  private_key         = var.private_key
+  tenancy_ocid        = var.tenancy_ocid
+}
+
+variable "region" {
+  description = "OCI region"
+  type        = string
+  default     = "us-ashburn-1"
+}
+
+variable "compartment_id" {
+  description = "OCI compartment OCID"
+  type        = string
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key for instance access"
+  type        = string
+}
+
+
+
+# Get availability domain
+data "oci_identity_availability_domains" "ads" {
+  compartment_id = var.compartment_id
+}
+
+# Get Ubuntu image
+data "oci_core_images" "ubuntu_images" {
+  compartment_id           = var.compartment_id
+  operating_system         = "Canonical Ubuntu"
+  operating_system_version = "22.04"
+  shape                    = "VM.Standard.E2.1.Micro"
+  sort_by                  = "TIMECREATED"
+  sort_order               = "DESC"
+}
+
+# Create VCN
+resource "oci_core_vcn" "hermes_vcn" {
+  compartment_id = var.compartment_id
+  cidr_blocks    = ["10.0.0.0/16"]
+  display_name   = "hermes-vcn"
+  dns_label      = "hermesvcn"
+}
+
+# Create Internet Gateway
+resource "oci_core_internet_gateway" "hermes_igw" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.hermes_vcn.id
+  display_name   = "hermes-igw"
+}
+
+# Create Route Table
+resource "oci_core_route_table" "hermes_rt" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.hermes_vcn.id
+  display_name   = "hermes-rt"
+
+  route_rules {
+    destination       = "0.0.0.0/0"
+    destination_type  = "CIDR_BLOCK"
+    network_entity_id = oci_core_internet_gateway.hermes_igw.id
+  }
+}
+
+# Create Subnet
+resource "oci_core_subnet" "hermes_subnet" {
+  compartment_id      = var.compartment_id
+  vcn_id              = oci_core_vcn.hermes_vcn.id
+  cidr_block          = "10.0.1.0/24"
+  display_name        = "hermes-subnet"
+  dns_label           = "hermessubnet"
+  route_table_id      = oci_core_route_table.hermes_rt.id
+  security_list_ids   = [oci_core_security_list.hermes_sl.id]
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+}
+
+# Create DB Subnet
+resource "oci_core_subnet" "hermes_db_subnet" {
+  compartment_id      = var.compartment_id
+  vcn_id              = oci_core_vcn.hermes_vcn.id
+  cidr_block          = "10.0.2.0/24"
+  display_name        = "hermes-db-subnet"
+  dns_label           = "hermesdbsubnet"
+  route_table_id      = oci_core_route_table.hermes_rt.id
+  security_list_ids   = [oci_core_security_list.hermes_db_sl.id]
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  prohibit_public_ip_on_vnic = true
+}
+
+# Create Security List for App
+resource "oci_core_security_list" "hermes_sl" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.hermes_vcn.id
+  display_name   = "hermes-sl"
+
+  egress_security_rules {
+    destination = "0.0.0.0/0"
+    protocol    = "all"
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 22
+      max = 22
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 9292
+      max = 9292
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 8080
+      max = 8080
+    }
+  }
+
+
+}
+
+# Create Security List for Database
+resource "oci_core_security_list" "hermes_db_sl" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.hermes_vcn.id
+  display_name   = "hermes-db-sl"
+
+  egress_security_rules {
+    destination = "0.0.0.0/0"
+    protocol    = "all"
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "10.0.1.0/24"
+    tcp_options {
+      min = 3306
+      max = 3306
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "10.0.1.0/24"
+    tcp_options {
+      min = 33060
+      max = 33060
+    }
+  }
+}
+
+# Create MySQL HeatWave Database System (Free Tier)
+resource "oci_mysql_mysql_db_system" "hermes_mysql" {
+  compartment_id = var.compartment_id
+  display_name   = "hermes-mysql-free"
+  description    = "MySQL HeatWave Free Tier"
+  
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  shape_name         = "MySQL.Free"
+  subnet_id          = oci_core_subnet.hermes_db_subnet.id
+  
+  admin_password = var.db_password
+  admin_username = "admin"
+  
+  data_storage_size_in_gb = 50
+  
+  configuration_id = data.oci_mysql_mysql_configurations.free_config.configurations[0].id
+  
+  backup_policy {
+    is_enabled        = false
+    retention_in_days = 1
+  }
+  
+  maintenance {
+    window_start_time = "SUNDAY 14:30"
+  }
+}
+
+# Get MySQL configurations
+data "oci_mysql_mysql_configurations" "free_config" {
+  compartment_id = var.compartment_id
+  type          = ["DEFAULT"]
+  shape_name    = "MySQL.Free"
+}
+
+# Create Compute Instance
+resource "oci_core_instance" "hermes_instance" {
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  compartment_id      = var.compartment_id
+  display_name        = "hermes-payment-portal"
+  shape               = "VM.Standard.E2.1.Micro"
+
+  create_vnic_details {
+    subnet_id        = oci_core_subnet.hermes_subnet.id
+    display_name     = "hermes-vnic"
+    assign_public_ip = true
+  }
+
+  source_details {
+    source_type = "image"
+    source_id   = data.oci_core_images.ubuntu_images.images[0].id
+    boot_volume_size_in_gbs = 47
+  }
+
+  metadata = {
+    ssh_authorized_keys = var.ssh_public_key
+    user_data = base64encode(templatefile("${path.module}/../scripts/setup-server.sh", {
+      db_host     = oci_mysql_mysql_db_system.hermes_mysql.ip_address
+      db_password = var.db_password
+    }))
+  }
+
+  timeouts {
+    create = "15m"
+  }
+  
+  depends_on = [oci_mysql_mysql_db_system.hermes_mysql]
+}
+
+output "instance_public_ip" {
+  description = "Public IP of the Hermes Payment Portal instance"
+  value       = oci_core_instance.hermes_instance.public_ip
+}
+
+output "mysql_ip" {
+  description = "Private IP of MySQL HeatWave instance"
+  value       = oci_mysql_mysql_db_system.hermes_mysql.ip_address
+}
+
+output "mysql_port" {
+  description = "MySQL port"
+  value       = oci_mysql_mysql_db_system.hermes_mysql.port
+}
+
+output "database_connection" {
+  description = "Database connection details"
+  value = {
+    host     = oci_mysql_mysql_db_system.hermes_mysql.ip_address
+    port     = oci_mysql_mysql_db_system.hermes_mysql.port
+    username = "admin"
+    database = "hermes_payments"
+  }
+  sensitive = false
 }

@@ -17,7 +17,9 @@ public class PaymentValidationService {
                 .collect(Collectors.toList());
 
         boolean isDuplicate = existingBookingDTOs.stream()
-                .anyMatch(p -> p.getEmail().equalsIgnoreCase(payment.getEmail()) &&
+                .anyMatch(p -> p.getEmail() != null && payment.getEmail() != null &&
+                        p.getEmail().equalsIgnoreCase(payment.getEmail()) &&
+                        p.getReference() != null && payment.getReference() != null &&
                         !p.getReference().equals(payment.getReference()));
         
         return ValidationResult.builder()
@@ -55,11 +57,19 @@ public class PaymentValidationService {
     }
     
     public ValidationResult validateOverUnderPayment(BigDecimal amount, BigDecimal amountReceived) {
-        if (amount.equals(amountReceived)) {
+        if (amount != null && amountReceived != null && amount.equals(amountReceived)) {
             return ValidationResult.builder()
                     .valid(true)
                     .errorType(ValidationResult.ValidationErrorType.NONE)
                     .message("Payment amount matches")
+                    .build();
+        }
+        
+        if (amount == null || amountReceived == null) {
+            return ValidationResult.builder()
+                    .valid(false)
+                    .errorType(ValidationResult.ValidationErrorType.NONE)
+                    .message("Invalid payment amounts")
                     .build();
         }
         
