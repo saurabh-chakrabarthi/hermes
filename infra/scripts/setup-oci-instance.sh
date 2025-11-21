@@ -77,7 +77,7 @@ server.mount_proc '/api/bookings' do |req, res|
 end
 
 # Serve static files
-server.mount '/', WEBrick::HTTPServlet::FileHandler, '../client/src/main/resources/static'
+server.mount '/', WEBrick::HTTPServlet::FileHandler, 'public'
 
 trap('INT') { server.shutdown }
 
