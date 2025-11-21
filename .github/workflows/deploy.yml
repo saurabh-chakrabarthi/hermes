@@ -82,17 +82,29 @@ jobs:
         terraform_version: 1.6.0
     
     - name: Setup OCI CLI
-      uses: oracle-actions/configure-oci-cli@v1.1
-      with:
-        user-ocid: ${{ secrets.OCI_USER_OCID }}
-        tenancy-ocid: ${{ secrets.OCI_TENANCY_OCID }}
-        region: ${{ secrets.OCI_REGION }}
-        fingerprint: ${{ secrets.OCI_FINGERPRINT }}
-        private-key: ${{ secrets.OCI_PRIVATE_KEY }}
+      run: |
+        curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
+        echo 'export PATH="$HOME/bin:$PATH"' >> $GITHUB_ENV
+        
+        # Create OCI config
+        mkdir -p ~/.oci
+        cat > ~/.oci/config << EOF
+        [DEFAULT]
+        user=${{ secrets.OCI_USER_OCID }}
+        fingerprint=${{ secrets.OCI_FINGERPRINT }}
+        tenancy=${{ secrets.OCI_TENANCY_OCID }}
+        region=${{ secrets.OCI_REGION }}
+        key_file=~/.oci/key.pem
+        EOF
+        
+        # Create private key file
+        echo '${{ secrets.OCI_PRIVATE_KEY }}' > ~/.oci/key.pem
+        chmod 600 ~/.oci/key.pem
     
     - name: Deploy Infrastructure
       working-directory: ./infra/terraform
       run: |
+        export PATH="$HOME/bin:$PATH"
         terraform init
         terraform plan \
           -var="compartment_id=${{ secrets.OCI_COMPARTMENT_ID }}" \
