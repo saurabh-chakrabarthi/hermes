@@ -1,9 +1,16 @@
 package com.payment.client.integration;
 
 import com.payment.client.dto.BookingResponse;
+import com.payment.client.dto.BookingDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+
+import java.util.List;
+import java.util.ArrayList;
 
 @Component
 public class PaymentApiClient {
@@ -16,12 +23,24 @@ public class PaymentApiClient {
     }
 
     public BookingResponse getBookings() {
-        // Server returns array directly, so we need to handle it
-        Object[] bookings = restTemplate.getForObject(apiBaseUrl + "/api/bookings", Object[].class);
-        BookingResponse response = new BookingResponse();
-        if (bookings != null) {
-            response.setBookings(java.util.Arrays.asList(bookings));
+        try {
+            // Server returns array directly, so we get it as a List
+            ResponseEntity<List<BookingDTO>> responseEntity = restTemplate.exchange(
+                apiBaseUrl + "/api/bookings",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<BookingDTO>>() {}
+            );
+            
+            BookingResponse response = new BookingResponse();
+            List<BookingDTO> bookings = responseEntity.getBody();
+            response.setBookings(bookings != null ? bookings : new ArrayList<>());
+            return response;
+        } catch (Exception e) {
+            // If there's an error, return empty response
+            BookingResponse response = new BookingResponse();
+            response.setBookings(new ArrayList<>());
+            return response;
         }
-        return response;
     }
 }
