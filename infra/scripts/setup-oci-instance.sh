@@ -59,7 +59,7 @@ echo "Ruby: $(ruby -v)"
 
 sleep 3
 if sudo systemctl is-active --quiet payment-server; then
-    echo "✅ Simple server running at http://129.213.125.13:9292"
+    echo "✅ Hermes Payment Portal running at http://129.213.125.13:9292"
     echo "Test: curl http://129.213.125.13:9292/health"
 else
     echo "❌ Server failed:"
