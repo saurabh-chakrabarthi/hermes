@@ -16,6 +16,12 @@ public class PaymentApiClient {
     }
 
     public BookingResponse getBookings() {
-        return restTemplate.getForObject(apiBaseUrl + "/api/bookings", BookingResponse.class);
+        // Server returns array directly, so we need to handle it
+        Object[] bookings = restTemplate.getForObject(apiBaseUrl + "/api/bookings", Object[].class);
+        BookingResponse response = new BookingResponse();
+        if (bookings != null) {
+            response.setBookings(java.util.Arrays.asList(bookings));
+        }
+        return response;
     }
 }
