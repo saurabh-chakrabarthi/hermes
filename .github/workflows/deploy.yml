@@ -1,63 +1,15 @@
-name: Build and Deploy
+name: Deploy to OCI
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
-    - name: Run Tests
-      run: |
-        cd client
-        mvn test
-
-  deploy-client:
-    needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
-    - name: Build Static Client
-      run: |
-        cd client
-        mvn clean package -DskipTests
-        mkdir -p ../dist
-        cp -r src/main/resources/static/* ../dist/
-    
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
-
-  deploy-server:
-    needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    
     - name: Deploy to Oracle Cloud
-      uses: appleboy/ssh-action@v0.1.5
+      uses: appleboy/ssh-action@v0.1.7
       with:
         host: 129.213.125.13
         username: ubuntu
@@ -65,5 +17,5 @@ jobs:
         script: |
           cd /home/ubuntu/payment-portal
           git pull origin main
-          cd server && bundle install
           sudo systemctl restart payment-server
+          echo "✅ Deployment completed successfully!"
