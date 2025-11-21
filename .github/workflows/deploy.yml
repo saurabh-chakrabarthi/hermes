@@ -102,6 +102,12 @@ jobs:
         echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/key.pem
         chmod 600 ~/.oci/key.pem
         
+        # Validate private key format
+        echo "Private key validation:"
+        head -1 ~/.oci/key.pem
+        tail -1 ~/.oci/key.pem
+        wc -l ~/.oci/key.pem
+        
         # Verify setup
         echo "OCI CLI version:"
         oci --version
@@ -109,6 +115,10 @@ jobs:
         cat ~/.oci/config
         echo "Key file permissions:"
         ls -la ~/.oci/key.pem
+        
+        # Test OCI authentication
+        echo "Testing OCI authentication:"
+        oci iam compartment get --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} || echo "Auth test failed"
     
     - name: Deploy Infrastructure
       working-directory: ./infra/terraform
