@@ -84,7 +84,8 @@ jobs:
     - name: Setup OCI CLI
       run: |
         curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
-        echo 'export PATH="$HOME/bin:$PATH"' >> $GITHUB_ENV
+        export PATH="$HOME/bin:$PATH"
+        echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
         
         # Create OCI config
         mkdir -p ~/.oci
@@ -94,12 +95,20 @@ jobs:
         fingerprint=${{ secrets.OCI_FINGERPRINT }}
         tenancy=${{ secrets.OCI_TENANCY_OCID }}
         region=${{ secrets.OCI_REGION }}
-        key_file=~/.oci/key.pem
+        key_file=$HOME/.oci/key.pem
         EOF
         
-        # Create private key file
-        echo '${{ secrets.OCI_PRIVATE_KEY }}' > ~/.oci/key.pem
+        # Create private key file (handle potential formatting issues)
+        echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/key.pem
         chmod 600 ~/.oci/key.pem
+        
+        # Verify setup
+        echo "OCI CLI version:"
+        oci --version
+        echo "Config file:"
+        cat ~/.oci/config
+        echo "Key file permissions:"
+        ls -la ~/.oci/key.pem
     
     - name: Deploy Infrastructure
       working-directory: ./infra/terraform
@@ -109,20 +118,10 @@ jobs:
         terraform plan \
           -var="compartment_id=${{ secrets.OCI_COMPARTMENT_ID }}" \
           -var="ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}" \
-          -var="user_ocid=${{ secrets.OCI_USER_OCID }}" \
-          -var="fingerprint=${{ secrets.OCI_FINGERPRINT }}" \
-          -var="private_key=${{ secrets.OCI_PRIVATE_KEY }}" \
-          -var="tenancy_ocid=${{ secrets.OCI_TENANCY_OCID }}" \
-          -var="region=${{ secrets.OCI_REGION }}" \
           -var="db_password=${{ secrets.DB_PASSWORD }}"
         terraform apply -auto-approve \
           -var="compartment_id=${{ secrets.OCI_COMPARTMENT_ID }}" \
           -var="ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}" \
-          -var="user_ocid=${{ secrets.OCI_USER_OCID }}" \
-          -var="fingerprint=${{ secrets.OCI_FINGERPRINT }}" \
-          -var="private_key=${{ secrets.OCI_PRIVATE_KEY }}" \
-          -var="tenancy_ocid=${{ secrets.OCI_TENANCY_OCID }}" \
-          -var="region=${{ secrets.OCI_REGION }}" \
           -var="db_password=${{ secrets.DB_PASSWORD }}"
         
         # Get instance IP

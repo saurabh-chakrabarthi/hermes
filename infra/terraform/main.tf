@@ -8,11 +8,7 @@ terraform {
 }
 
 provider "oci" {
-  region              = var.region
-  user_ocid           = var.user_ocid
-  fingerprint         = var.fingerprint
-  private_key         = var.private_key
-  tenancy_ocid        = var.tenancy_ocid
+  # Uses OCI CLI configuration from ~/.oci/config
 }
 
 
