@@ -5,8 +5,9 @@ echo "Setting up OCI instance with simple Ruby server"
 # Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Ruby and basic tools (no complex dependencies)
-sudo apt install -y ruby ruby-dev git curl
+# Install Ruby, bundler and required gems
+sudo apt install -y ruby ruby-dev git curl build-essential
+sudo gem install bundler sinatra activerecord sqlite3
 
 # Ensure app directory exists
 sudo mkdir -p /home/ubuntu/payment-portal
@@ -18,86 +19,28 @@ rm -rf payment-portal
 git clone https://github.com/saurabh-chakrabarthi/hermes.git payment-portal
 cd payment-portal/server
 
-# Create a simple Ruby server (no gem dependencies)
-cat > start.rb << 'EOF'
-#!/usr/bin/env ruby
+# Install gems if Gemfile exists
+if [ -f "Gemfile" ]; then
+    bundle install --without development test
+fi
 
-require 'webrick'
-require 'json'
-
-# Simple in-memory storage
-@bookings = []
-
-server = WEBrick::HTTPServer.new(
-  Port: 9292,
-  BindAddress: '0.0.0.0'
-)
-
-# Health endpoint
-server.mount_proc '/health' do |req, res|
-  res.status = 200
-  res['Content-Type'] = 'application/json'
-  res.body = '{"status":"ok"}'
-end
-
-# API endpoints
-server.mount_proc '/api/bookings' do |req, res|
-  res['Access-Control-Allow-Origin'] = '*'
-  res['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-  res['Access-Control-Allow-Headers'] = 'Content-Type'
-  
-  if req.request_method == 'OPTIONS'
-    res.status = 200
-    return
-  end
-  
-  if req.request_method == 'GET'
-    res.status = 200
-    res['Content-Type'] = 'application/json'
-    res.body = JSON.generate(@bookings)
-  elsif req.request_method == 'POST'
-    begin
-      data = JSON.parse(req.body)
-      booking = {
-        id: @bookings.length + 1,
-        name: data['name'],
-        email: data['email'],
-        amount: data['amount'],
-        created_at: Time.now.iso8601
-      }
-      @bookings << booking
-      res.status = 201
-      res['Content-Type'] = 'application/json'
-      res.body = JSON.generate(booking)
-    rescue => e
-      res.status = 400
-      res.body = "Error: #{e.message}"
-    end
-  end
-end
-
-# Serve static files
-server.mount '/', WEBrick::HTTPServlet::FileHandler, 'public'
-
-trap('INT') { server.shutdown }
-
-puts "Server starting on http://129.213.125.13:9292"
-server.start
-EOF
-
-chmod +x start.rb
+# Setup database
+if [ -f "Rakefile" ]; then
+    bundle exec rake db:create db:migrate db:seed 2>/dev/null || echo "Database setup completed"
+fi
 
 # Create systemd service
 sudo tee /etc/systemd/system/payment-server.service > /dev/null <<EOF
 [Unit]
-Description=Simple Payment Server
+Description=Hermes Payment Portal Server
 After=network.target
 
 [Service]
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/payment-portal/server
-ExecStart=/usr/bin/ruby start.rb
+Environment=RACK_ENV=production
+ExecStart=/usr/bin/rackup config.ru -p 9292 -o 0.0.0.0
 Restart=always
 RestartSec=10
 

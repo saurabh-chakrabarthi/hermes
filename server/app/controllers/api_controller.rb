@@ -12,6 +12,18 @@ class ApiController < ApplicationController
 
   get '/api/bookings' do
     bookings = Payment.all.map(&:sanitized_attributes)
-    JSON.dump('bookings' => bookings)
+    JSON.dump(bookings)
+  end
+
+  post '/api/bookings' do
+    begin
+      data = JSON.parse(request.body.read)
+      payment = Payment.create_with_reference(data)
+      status 201
+      JSON.dump(payment.sanitized_attributes)
+    rescue => e
+      status 400
+      JSON.dump('error' => e.message)
+    end
   end
 end
