@@ -18,4 +18,7 @@ jobs:
           cd /home/ubuntu/payment-portal
           git pull origin main
           sudo systemctl restart payment-server
-          echo "✅ Deployment completed successfully!"
+          sudo systemctl restart payment-client
+          echo "✅ Server and Client deployed successfully!"
+          echo "Server: http://129.213.125.13"
+          echo "Client: http://129.213.125.13:8080"
