@@ -40,7 +40,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/payment-portal/server
 Environment=RACK_ENV=production
-ExecStart=/usr/bin/rackup config.ru -p 9292 -o 0.0.0.0
+ExecStart=/usr/bin/rackup config.ru -p 80 -o 0.0.0.0
 Restart=always
 RestartSec=10
 
@@ -53,14 +53,14 @@ sudo systemctl enable payment-server
 sudo systemctl restart payment-server
 
 # Open firewall port
-sudo ufw allow 9292
+sudo ufw allow 80
 
 echo "Ruby: $(ruby -v)"
 
 sleep 3
 if sudo systemctl is-active --quiet payment-server; then
-    echo "✅ Hermes Payment Portal running at http://129.213.125.13:9292"
-    echo "Test: curl http://129.213.125.13:9292/health"
+    echo "✅ Hermes Payment Portal running at http://129.213.125.13"
+    echo "Test: curl http://129.213.125.13/health"
 else
     echo "❌ Server failed:"
     sudo journalctl -u payment-server --no-pager -l
