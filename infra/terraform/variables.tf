@@ -21,3 +21,24 @@ variable "db_password" {
   default     = "ChangeMe123!"
 }
 
+variable "user_ocid" {
+  description = "OCI user OCID"
+  type        = string
+}
+
+variable "fingerprint" {
+  description = "OCI API key fingerprint"
+  type        = string
+}
+
+variable "private_key" {
+  description = "OCI private key content"
+  type        = string
+  sensitive   = true
+}
+
+variable "tenancy_ocid" {
+  description = "OCI tenancy OCID"
+  type        = string
+}
+
