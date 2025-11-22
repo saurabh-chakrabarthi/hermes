@@ -154,26 +154,36 @@ jobs:
     
     - name: Wait for Services
       run: |
-        echo "Waiting for services to start..."
-        sleep 180
+        echo "Waiting for cloud-init and services to start..."
+        echo "Instance IP: $INSTANCE_IP"
         
-        # Wait for health endpoint
-        for i in {1..30}; do
-          if curl -f http://$INSTANCE_IP:9292/health; then
+        # Wait longer for cloud-init to complete
+        sleep 300
+        
+        # Wait for health endpoint with better feedback
+        for i in {1..60}; do
+          echo "Attempt $i/60: Checking http://$INSTANCE_IP:9292/health"
+          if curl -f -m 5 http://$INSTANCE_IP:9292/health 2>/dev/null; then
             echo "✅ Services ready!"
-            break
+            exit 0
           fi
-          echo "Waiting... ($i/30)"
           sleep 10
         done
+        
+        echo "⚠️ Service did not start in time. Check logs manually:"
+        echo "ssh ubuntu@$INSTANCE_IP"
+        echo "sudo journalctl -u payment-server -n 50"
+        exit 1
     
     - name: Health Check
       run: |
+        echo "Checking Node.js server..."
         curl -f http://$INSTANCE_IP:9292/health || exit 1
-        curl -f http://$INSTANCE_IP:9292/ || exit 1
+        
+        echo "Checking Spring Boot client..."
         curl -f http://$INSTANCE_IP:8080/ || exit 1
         
+        echo ""
         echo "✅ Deployment successful!"
-        echo "🌐 Server: http://$INSTANCE_IP:9292"
-        echo "📊 Dashboard: http://$INSTANCE_IP:8080"
-        echo "🗄️ MySQL: $(cd infra/terraform && terraform output -raw mysql_ip)"
+        echo "🔵 Node.js Server: http://$INSTANCE_IP:9292"
+        echo "🟢 Spring Boot Client: http://$INSTANCE_IP:8080"

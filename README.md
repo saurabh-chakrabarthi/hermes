@@ -45,8 +45,8 @@ git add -A && git commit -m "Deploy to production" && git push
 
 ## Technology Stack
 
-- **Backend**: Node.js + Express + MySQL + Redis
-- **Frontend**: Java Spring Boot + Thymeleaf + Bootstrap
+- **Backend**: Node.js + Express
+- **Frontend**: Java Spring Boot + Thymeleaf + Bootstrap (optional)
 - **Infrastructure**: OCI (Always Free Tier)
 - **CI/CD**: GitHub Actions + Terraform
 
