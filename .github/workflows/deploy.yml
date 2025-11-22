@@ -133,6 +133,17 @@ jobs:
         TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       run: |
         export PATH="$HOME/bin:$PATH"
+        
+        # Debug: Check if variables are set
+        echo "Checking Terraform variables:"
+        echo "User OCID: ${TF_VAR_user_ocid:0:20}..."
+        echo "Fingerprint: $TF_VAR_fingerprint"
+        echo "Tenancy OCID: ${TF_VAR_tenancy_ocid:0:20}..."
+        echo "Region: $TF_VAR_region"
+        echo "Private key first line: $(echo "$TF_VAR_private_key" | head -1)"
+        echo "Private key last line: $(echo "$TF_VAR_private_key" | tail -1)"
+        echo "Private key line count: $(echo "$TF_VAR_private_key" | wc -l)"
+        
         terraform init
         terraform plan
         terraform apply -auto-approve
