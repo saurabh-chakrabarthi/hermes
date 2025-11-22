@@ -6,7 +6,7 @@ echo "=== Setting up Hermes Payment Portal ==="
 # Update system
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get upgrade -y
+apt-get upgrade -y --fix-missing || echo "Warning: apt upgrade had issues, continuing..."
 
 # Install Node.js 18.x and Java 17
 echo "Installing Node.js and Java..."
@@ -21,7 +21,7 @@ echo "Maven: $(mvn -version | head -1)"
 # Clone repository
 cd /home/ubuntu
 rm -rf payment-portal
-git clone https://github.com/saurabh-chakrabarthi/Hermes-Payment-Remittance-Portal.git payment-portal
+git clone https://github.com/saurabh-chakrabarthi/hermes.git payment-portal
 chown -R ubuntu:ubuntu /home/ubuntu/payment-portal
 
 # ===== Setup Node.js Server =====
