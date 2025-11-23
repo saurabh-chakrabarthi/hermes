@@ -117,6 +117,10 @@ resource "oci_core_instance" "hermes_instance" {
   compartment_id      = var.compartment_id
   display_name        = "hermes-payment-portal"
   shape               = "VM.Standard.E2.1.Micro"
+  
+  lifecycle {
+    create_before_destroy = false
+  }
 
   create_vnic_details {
     subnet_id        = oci_core_subnet.hermes_subnet.id

@@ -73,7 +73,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/payment-portal/client
 Environment="PAYMENT_SERVER_URL=http://localhost:9292"
-ExecStart=/usr/bin/java -jar target/payment-booking-client-1.0.0.jar --server.port=8080
+ExecStart=/usr/bin/java -jar target/payment-client-1.0.0.jar --server.port=8080
 Restart=always
 RestartSec=10
 StandardOutput=journal
