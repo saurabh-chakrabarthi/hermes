@@ -5,6 +5,10 @@ terraform {
       version = "~> 5.0"
     }
   }
+  
+  backend "local" {
+    path = "/tmp/terraform.tfstate"
+  }
 }
 
 provider "oci" {
@@ -22,6 +26,13 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.compartment_id
 }
 
+# Check for existing instances
+data "oci_core_instances" "existing_instances" {
+  compartment_id = var.compartment_id
+  display_name   = "hermes-payment-portal"
+  state          = "RUNNING"
+}
+
 # Get Ubuntu image
 data "oci_core_images" "ubuntu_images" {
   compartment_id           = var.compartment_id
@@ -32,87 +43,21 @@ data "oci_core_images" "ubuntu_images" {
   sort_order               = "DESC"
 }
 
-# Create VCN
-resource "oci_core_vcn" "hermes_vcn" {
+# Use existing VCN
+data "oci_core_vcns" "existing_vcn" {
   compartment_id = var.compartment_id
-  cidr_blocks    = ["10.0.0.0/16"]
-  display_name   = "hermes-vcn"
-  dns_label      = "hermesvcn"
+  display_name   = "hermes-payment-portal-vcn"
 }
 
-# Create Internet Gateway
-resource "oci_core_internet_gateway" "hermes_igw" {
+# Use existing subnet
+data "oci_core_subnets" "existing_subnet" {
   compartment_id = var.compartment_id
-  vcn_id         = oci_core_vcn.hermes_vcn.id
-  display_name   = "hermes-igw"
+  vcn_id         = data.oci_core_vcns.existing_vcn.virtual_networks[0].id
 }
 
-# Create Route Table
-resource "oci_core_route_table" "hermes_rt" {
-  compartment_id = var.compartment_id
-  vcn_id         = oci_core_vcn.hermes_vcn.id
-  display_name   = "hermes-rt"
-
-  route_rules {
-    destination       = "0.0.0.0/0"
-    destination_type  = "CIDR_BLOCK"
-    network_entity_id = oci_core_internet_gateway.hermes_igw.id
-  }
-}
-
-# Create Subnet
-resource "oci_core_subnet" "hermes_subnet" {
-  compartment_id      = var.compartment_id
-  vcn_id              = oci_core_vcn.hermes_vcn.id
-  cidr_block          = "10.0.1.0/24"
-  display_name        = "hermes-subnet"
-  dns_label           = "hermessubnet"
-  route_table_id      = oci_core_route_table.hermes_rt.id
-  security_list_ids   = [oci_core_security_list.hermes_sl.id]
-  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-}
-
-# Create Security List for App
-resource "oci_core_security_list" "hermes_sl" {
-  compartment_id = var.compartment_id
-  vcn_id         = oci_core_vcn.hermes_vcn.id
-  display_name   = "hermes-sl"
-
-  egress_security_rules {
-    destination = "0.0.0.0/0"
-    protocol    = "all"
-  }
-
-  ingress_security_rules {
-    protocol = "6"
-    source   = "0.0.0.0/0"
-    tcp_options {
-      min = 22
-      max = 22
-    }
-  }
-
-  ingress_security_rules {
-    protocol = "6"
-    source   = "0.0.0.0/0"
-    tcp_options {
-      min = 9292
-      max = 9292
-    }
-  }
-
-  ingress_security_rules {
-    protocol = "6"
-    source   = "0.0.0.0/0"
-    tcp_options {
-      min = 8080
-      max = 8080
-    }
-  }
-}
-
-# Create Compute Instance
+# Create/Replace instance (always creates fresh instance)
 resource "oci_core_instance" "hermes_instance" {
+  
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id      = var.compartment_id
   display_name        = "hermes-payment-portal"
@@ -123,7 +68,7 @@ resource "oci_core_instance" "hermes_instance" {
   }
 
   create_vnic_details {
-    subnet_id        = oci_core_subnet.hermes_subnet.id
+    subnet_id        = data.oci_core_subnets.existing_subnet.subnets[0].id
     display_name     = "hermes-vnic"
     assign_public_ip = true
   }
@@ -146,6 +91,6 @@ resource "oci_core_instance" "hermes_instance" {
 
 output "instance_public_ip" {
   description = "Public IP of the Hermes Payment Portal instance"
-  value       = oci_core_instance.hermes_instance.public_ip
+  value = oci_core_instance.hermes_instance.public_ip
 }
 

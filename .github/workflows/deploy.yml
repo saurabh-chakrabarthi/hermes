@@ -120,6 +120,25 @@ jobs:
         echo "Testing OCI authentication:"
         oci iam compartment get --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} || echo "Auth test failed"
     
+    - name: Cleanup Old Resources
+      run: |
+        export PATH="$HOME/bin:$PATH"
+        echo "Cleaning up duplicate VCNs..."
+        
+        # Get all VCNs named hermes-vcn and delete them
+        VCN_IDS=$(oci network vcn list --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} --display-name "hermes-vcn" --query "data[].id" --raw-output 2>/dev/null || echo "")
+        
+        if [ ! -z "$VCN_IDS" ]; then
+          echo "Found duplicate hermes-vcn VCNs to delete"
+          for vcn_id in $VCN_IDS; do
+            echo "Deleting VCN: $vcn_id"
+            # Delete associated resources first, then VCN
+            oci network vcn delete --vcn-id $vcn_id --force --wait-for-state TERMINATED 2>/dev/null || echo "Failed to delete VCN $vcn_id"
+          done
+        else
+          echo "No duplicate VCNs found"
+        fi
+    
     - name: Deploy Infrastructure
       working-directory: ./infra/terraform
       env:
@@ -157,11 +176,11 @@ jobs:
         echo "Waiting for cloud-init and services to start..."
         echo "Instance IP: $INSTANCE_IP"
         
-        # Wait longer for cloud-init to complete
-        sleep 300
+        # Wait longer for cloud-init and Maven build to complete
+        sleep 600
         
         # Wait for health endpoint with better feedback
-        for i in {1..60}; do
+        for i in {1..30}; do
           echo "Attempt $i/60: Checking http://$INSTANCE_IP:9292/health"
           if curl -f -m 5 http://$INSTANCE_IP:9292/health 2>/dev/null; then
             echo "✅ Services ready!"

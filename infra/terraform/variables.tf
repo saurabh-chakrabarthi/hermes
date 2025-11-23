@@ -42,3 +42,9 @@ variable "tenancy_ocid" {
   type        = string
 }
 
+variable "deployment_trigger" {
+  description = "Trigger to force instance replacement"
+  type        = string
+  default     = "1"
+}
+
