@@ -18,7 +18,11 @@ app.use(express.static('public'));
 
 // Routes
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const estTime = new Date().toLocaleString("sv-SE", {timeZone: "America/New_York"}).replace(' ', 'T') + '-05:00';
+  res.json({ 
+    status: 'ok', 
+    timestamp: estTime
+  });
 });
 
 app.get('/api/bookings', (req, res) => {

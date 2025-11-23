@@ -33,6 +33,11 @@ data "oci_core_instances" "existing_instances" {
   state          = "RUNNING"
 }
 
+# Only create instance if none exists
+locals {
+  should_create_instance = length(data.oci_core_instances.existing_instances.instances) == 0
+}
+
 # Get Ubuntu image
 data "oci_core_images" "ubuntu_images" {
   compartment_id           = var.compartment_id
@@ -55,8 +60,9 @@ data "oci_core_subnets" "existing_subnet" {
   vcn_id         = data.oci_core_vcns.existing_vcn.virtual_networks[0].id
 }
 
-# Create/Replace instance (always creates fresh instance)
+# Create instance only if none exists
 resource "oci_core_instance" "hermes_instance" {
+  count = local.should_create_instance ? 1 : 0
   
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id      = var.compartment_id
@@ -91,6 +97,6 @@ resource "oci_core_instance" "hermes_instance" {
 
 output "instance_public_ip" {
   description = "Public IP of the Hermes Payment Portal instance"
-  value = oci_core_instance.hermes_instance.public_ip
+  value = local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip
 }
 
