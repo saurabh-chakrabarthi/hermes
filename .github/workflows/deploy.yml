@@ -136,13 +136,12 @@ jobs:
   deploy:
     name: "🚀 Deploy to OCI"
     runs-on: ubuntu-latest
-    needs: [junit-tests, test-nodejs]
+    needs: [build-images]
     if: |
       github.ref == 'refs/heads/main' && 
       github.event_name == 'push' &&
       always() &&
-      (needs.junit-tests.result == 'success' || needs.junit-tests.result == 'skipped') &&
-      (needs.test-nodejs.result == 'success' || needs.test-nodejs.result == 'skipped')
+      (needs.build-images.result == 'success' || needs.build-images.result == 'skipped')
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
