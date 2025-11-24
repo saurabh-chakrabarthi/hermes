@@ -33,9 +33,22 @@ data "oci_core_instances" "existing_instances" {
   state          = "RUNNING"
 }
 
+# Get VNIC attachments for existing instance
+data "oci_core_vnic_attachments" "existing_vnic_attachments" {
+  compartment_id = var.compartment_id
+  instance_id    = length(data.oci_core_instances.existing_instances.instances) > 0 ? data.oci_core_instances.existing_instances.instances[0].id : null
+}
+
+# Get VNIC details for existing instance
+data "oci_core_vnic" "existing_vnic" {
+  count   = length(data.oci_core_vnic_attachments.existing_vnic_attachments.vnic_attachments) > 0 ? 1 : 0
+  vnic_id = data.oci_core_vnic_attachments.existing_vnic_attachments.vnic_attachments[0].vnic_id
+}
+
 # Only create instance if none exists
 locals {
   should_create_instance = length(data.oci_core_instances.existing_instances.instances) == 0
+  existing_public_ip     = length(data.oci_core_vnic.existing_vnic) > 0 ? data.oci_core_vnic.existing_vnic[0].public_ip_address : ""
 }
 
 # Get Ubuntu image

@@ -5,12 +5,12 @@ output "instance_id" {
 
 output "instance_public_ip" {
   description = "Public IP of the Hermes Payment Portal instance"
-  value = local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip
+  value = local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip
 }
 
 output "private_ip" {
   description = "Private IP address of the instance"
-  value = local.should_create_instance ? oci_core_instance.hermes_instance[0].private_ip : data.oci_core_instances.existing_instances.instances[0].private_ip
+  value = local.should_create_instance ? oci_core_instance.hermes_instance[0].private_ip : (length(data.oci_core_vnic.existing_vnic) > 0 ? data.oci_core_vnic.existing_vnic[0].private_ip_address : "")
 }
 
 output "instance_state" {
@@ -31,7 +31,7 @@ output "security_validation" {
 output "deployment_urls" {
   description = "Application URLs"
   value = {
-    payment_server = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip}:9292"
-    dashboard      = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip}:8080"
+    payment_server = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip}:9292"
+    dashboard      = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip}:8080"
   }
 }
