@@ -48,3 +48,8 @@ variable "deployment_trigger" {
   default     = "1"
 }
 
+variable "github_owner" {
+  description = "GitHub repository owner for container registry"
+  type        = string
+}
+

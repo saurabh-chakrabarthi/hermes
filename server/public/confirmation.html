@@ -81,7 +81,7 @@
                   <i class="bi bi-plus-circle me-2"></i>
                   Make Another Payment
                 </a>
-                <a href="http://129.213.125.13:8081" class="btn btn-outline-primary btn-lg" target="_blank">
+                <a href="#" id="dashboardLink" class="btn btn-outline-primary btn-lg" target="_blank">
                   <i class="bi bi-graph-up-arrow me-2"></i>
                   View Dashboard
                 </a>
@@ -123,6 +123,10 @@
         
         const successIcon = document.querySelector('.success-icon i');
         successIcon.style.animation = 'bounceIn 1s ease-out';
+        
+        // Set dynamic dashboard URL
+        const dashboardUrl = `http://${window.location.hostname}:8080`;
+        document.getElementById('dashboardLink').href = dashboardUrl;
       });
 
       const style = document.createElement('style');

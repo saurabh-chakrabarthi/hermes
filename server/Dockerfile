@@ -7,8 +7,6 @@ RUN npm ci --only=production
 
 COPY . .
 
-EXPOSE 80
+EXPOSE 9292
 
-USER node
-
-CMD ["node", "server.js"]
+CMD ["node", "server-simple.js"]

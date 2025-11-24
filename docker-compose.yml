@@ -1,79 +1,33 @@
 version: '3.8'
 
 services:
-  # Node.js Payment Server
   payment-server:
-    build: 
-      context: ./server
-      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/hermes-payment-server:latest
+    container_name: payment-server
     ports:
-      - "3000:3000"
+      - "9292:9292"
     environment:
-      - PORT=3000
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASSWORD=rootpassword
-      - DB_NAME=hermes_payments
-      - DB_PORT=3306
-      - REDIS_URL=redis://redis:6379
-      - NODE_ENV=development
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    volumes:
-      - ./server:/app
-      - /app/node_modules
-    networks:
-      - hermes-network
-
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=hermes_payments
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./server/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - PORT=9292
+      - NODE_ENV=production
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
-    networks:
-      - hermes-network
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9292/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
+  payment-dashboard:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/hermes-payment-dashboard:latest
+    container_name: payment-dashboard
     ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - hermes-network
-
-  # Java Spring Boot Client
-  payment-client:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    ports:
-      - "8081:8080"
+      - "8080:8080"
     environment:
-      - PAYMENT_SERVER_URL=http://payment-server:3000
+      - PAYMENT_SERVER_URL=http://payment-server:9292
     depends_on:
       - payment-server
-    networks:
-      - hermes-network
-
-volumes:
-  mysql_data:
-  redis_data:
-
-networks:
-  hermes-network:
-    driver: bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

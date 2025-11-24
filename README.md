@@ -29,11 +29,14 @@ Enterprise payment processing system with Node.js backend and Java Spring Boot d
 
 ### Local Development
 ```bash
-# Start both services
+# Option 1: Docker Compose (Recommended)
+docker compose up -d
+
+# Option 2: Native processes
 ./scripts/start_both.sh
 
 # Access URLs
-# Payment Server: http://localhost:3000
+# Payment Server: http://localhost:9292
 # Dashboard: http://localhost:8080
 ```
 
@@ -41,17 +44,22 @@ Enterprise payment processing system with Node.js backend and Java Spring Boot d
 ```bash
 # Commit and push to trigger GitHub Actions
 git add -A && git commit -m "Deploy to production" && git push
+
+# Deployment time: ~7-8 minutes (Docker) vs ~10-12 minutes (Native)
 ```
 
 ## Technology Stack
 
 - **Backend**: Node.js + Express
-- **Frontend**: Java Spring Boot + Thymeleaf + Bootstrap (optional)
+- **Frontend**: Java Spring Boot + Thymeleaf + Bootstrap
+- **Containers**: Docker + Docker Compose
+- **Registry**: GitHub Container Registry (ghcr.io)
 - **Infrastructure**: OCI (Always Free Tier)
 - **CI/CD**: GitHub Actions + Terraform
 
 ## Documentation
 
+- [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md) ⭐ NEW
 - [Deployment Guide](docs/DEPLOYMENT_READY.md)
 - [GitHub Secrets Setup](docs/SECRETS_REQUIRED.md)
 - [Local Development](scripts/README.md)

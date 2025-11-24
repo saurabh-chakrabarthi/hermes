@@ -87,7 +87,9 @@ resource "oci_core_instance" "hermes_instance" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    user_data = base64encode(file("${path.module}/../scripts/setup-nodejs.sh"))
+    user_data = base64encode(templatefile("${path.module}/../scripts/setup-docker.sh", {
+      GITHUB_OWNER = var.github_owner
+    }))
   }
 
   timeouts {
@@ -95,8 +97,85 @@ resource "oci_core_instance" "hermes_instance" {
   }
 }
 
+# Get security lists for the subnet
+data "oci_core_security_lists" "subnet_security_lists" {
+  compartment_id = var.compartment_id
+  vcn_id         = data.oci_core_vcns.existing_vcn.virtual_networks[0].id
+}
+
+# Validate security rules
+locals {
+  required_ports = [22, 8080, 9292]
+  
+  # Get all ingress rules from all security lists
+  all_ingress_rules = flatten([
+    for sl in data.oci_core_security_lists.subnet_security_lists.security_lists : [
+      for rule in sl.ingress_security_rules : {
+        protocol = rule.protocol
+        source   = rule.source
+        tcp_options = rule.tcp_options
+      }
+    ]
+  ])
+  
+  # Check if each required port is allowed
+  port_22_allowed = anytrue([
+    for rule in local.all_ingress_rules :
+    rule.protocol == "6" && rule.source == "0.0.0.0/0" && (
+      length(rule.tcp_options) == 0 || 
+      anytrue([for opt in rule.tcp_options : 
+        (opt.min == 22 && opt.max == 22) || 
+        (opt.min <= 22 && opt.max >= 22)
+      ])
+    )
+  ])
+  
+  port_8080_allowed = anytrue([
+    for rule in local.all_ingress_rules :
+    rule.protocol == "6" && rule.source == "0.0.0.0/0" && (
+      length(rule.tcp_options) == 0 || 
+      anytrue([for opt in rule.tcp_options : 
+        (opt.min == 8080 && opt.max == 8080) || 
+        (opt.min <= 8080 && opt.max >= 8080)
+      ])
+    )
+  ])
+  
+  port_9292_allowed = anytrue([
+    for rule in local.all_ingress_rules :
+    rule.protocol == "6" && rule.source == "0.0.0.0/0" && (
+      length(rule.tcp_options) == 0 || 
+      anytrue([for opt in rule.tcp_options : 
+        (opt.min == 9292 && opt.max == 9292) || 
+        (opt.min <= 9292 && opt.max >= 9292)
+      ])
+    )
+  ])
+  
+  security_validation_passed = local.port_22_allowed && local.port_8080_allowed && local.port_9292_allowed
+}
+
+# Output security validation results
+output "security_validation" {
+  description = "Security rules validation status"
+  value = {
+    port_22_ssh      = local.port_22_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
+    port_8080_dashboard = local.port_8080_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
+    port_9292_server = local.port_9292_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
+    all_ports_open   = local.security_validation_passed ? "✅ ALL REQUIRED PORTS OPEN" : "❌ SOME PORTS BLOCKED"
+  }
+}
+
 output "instance_public_ip" {
   description = "Public IP of the Hermes Payment Portal instance"
   value = local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip
+}
+
+output "deployment_urls" {
+  description = "Application URLs"
+  value = {
+    payment_server = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip}:9292"
+    dashboard      = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : data.oci_core_instances.existing_instances.instances[0].public_ip}:8080"
+  }
 }
 
