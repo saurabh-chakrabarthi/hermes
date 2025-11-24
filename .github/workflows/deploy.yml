@@ -83,11 +83,7 @@ jobs:
       github.ref == 'refs/heads/main' && 
       github.event_name == 'push' &&
       (needs.junit-tests.result == 'success' || needs.junit-tests.result == 'skipped') &&
-      (needs.test-nodejs.result == 'success' || needs.test-nodejs.result == 'skipped') &&
-      (contains(github.event.head_commit.modified, 'server/') ||
-       contains(github.event.head_commit.modified, 'client/') ||
-       contains(github.event.head_commit.added, 'server/') ||
-       contains(github.event.head_commit.added, 'client/'))
+      (needs.test-nodejs.result == 'success' || needs.test-nodejs.result == 'skipped')
     permissions:
       contents: read
       packages: write
@@ -140,11 +136,13 @@ jobs:
   deploy:
     name: "🚀 Deploy to OCI"
     runs-on: ubuntu-latest
-    needs: [build-images]
+    needs: [junit-tests, test-nodejs]
     if: |
       github.ref == 'refs/heads/main' && 
       github.event_name == 'push' &&
-      (needs.build-images.result == 'success' || needs.build-images.result == 'skipped')
+      always() &&
+      (needs.junit-tests.result == 'success' || needs.junit-tests.result == 'skipped') &&
+      (needs.test-nodejs.result == 'success' || needs.test-nodejs.result == 'skipped')
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
