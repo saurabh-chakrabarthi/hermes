@@ -11,7 +11,13 @@ apt-get upgrade -y --fix-missing || echo "Warning: apt upgrade had issues, conti
 # Install Node.js 18.x and Java 17
 echo "Installing Node.js and Java..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt-get install -y nodejs git openjdk-17-jdk maven
+apt-get install -y nodejs git openjdk-17-jdk maven iptables-persistent
+
+# Remove OCI default iptables REJECT rules
+echo "Removing OCI default firewall rules..."
+iptables -D INPUT -j REJECT --reject-with icmp-host-prohibited 2>/dev/null || true
+iptables -D FORWARD -j REJECT --reject-with icmp-host-prohibited 2>/dev/null || true
+netfilter-persistent save
 
 echo "Node.js: $(node -v)"
 echo "NPM: $(npm -v)"
