@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 9292
 
-CMD ["node", "server-simple.js"]
+CMD ["node", "server.js"]
