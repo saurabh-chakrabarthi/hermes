@@ -13,14 +13,61 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   const estTime = new Date().toLocaleString("sv-SE", {timeZone: "America/New_York"}).replace(' ', 'T') + '-05:00';
-  res.json({ 
-    status: 'ok', 
+  
+  let overallStatus = 'ok';
+  let mysqlStatus = 'disconnected';
+  let mysqlError = null;
+  let redisStatus = 'disconnected';
+  let redisError = null;
+  
+  // Test MySQL connection
+  try {
+    await pool.query('SELECT 1');
+    mysqlStatus = 'connected';
+  } catch (err) {
+    mysqlStatus = 'error';
+    mysqlError = err.message;
+    overallStatus = 'degraded';
+    console.error('MySQL health check failed:', err);
+  }
+  
+  // Test Redis connection
+  try {
+    if (redisClient.isOpen) {
+      await redisClient.ping();
+      redisStatus = 'connected';
+    } else {
+      redisStatus = 'disconnected';
+      redisError = 'Redis client not open';
+      overallStatus = 'degraded';
+    }
+  } catch (err) {
+    redisStatus = 'error';
+    redisError = err.message;
+    overallStatus = 'degraded';
+    console.error('Redis health check failed:', err);
+  }
+  
+  const response = { 
+    status: overallStatus,
     timestamp: estTime,
-    database: pool ? 'connected' : 'disconnected',
-    redis: redisClient.isOpen ? 'connected' : 'disconnected'
-  });
+    services: {
+      mysql: {
+        status: mysqlStatus,
+        error: mysqlError
+      },
+      redis: {
+        status: redisStatus,
+        error: redisError
+      }
+    }
+  };
+  
+  // Return 503 if any service is down
+  const statusCode = overallStatus === 'ok' ? 200 : 503;
+  res.status(statusCode).json(response);
 });
 
 // Get all payments with caching

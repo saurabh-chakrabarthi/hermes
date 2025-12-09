@@ -209,6 +209,23 @@ jobs:
           echo "No duplicate VCNs found"
         fi
     
+    - name: Validate Secrets
+      run: |
+        echo "Validating required secrets..."
+        
+        if [ -z "${{ secrets.DB_PASSWORD }}" ]; then
+          echo "❌ ERROR: DB_PASSWORD secret is not set!"
+          echo "Please add DB_PASSWORD to GitHub Secrets"
+          exit 1
+        fi
+        
+        if [ -z "${{ secrets.OCI_USER_OCID }}" ]; then
+          echo "❌ ERROR: OCI_USER_OCID secret is not set!"
+          exit 1
+        fi
+        
+        echo "✅ All required secrets are set"
+    
     - name: Deploy Infrastructure
       working-directory: ./infra/terraform
       env:
@@ -291,15 +308,84 @@ jobs:
     
     - name: Health Check
       run: |
-        echo "Checking Node.js server..."
-        curl -sf http://$INSTANCE_IP:9292/health || exit 1
+        echo "=== Checking Node.js Server Health ==="
+        
+        # Get health response (allow non-200 status codes)
+        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:9292/health)
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:9292/health)
+        
+        echo "HTTP Status: $HTTP_CODE"
+        echo "Response:"
+        echo $HEALTH_RESPONSE | jq .
+        
+        # Parse response
+        OVERALL_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.status')
+        MYSQL_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.services.mysql.status')
+        MYSQL_ERROR=$(echo $HEALTH_RESPONSE | jq -r '.services.mysql.error')
+        REDIS_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.services.redis.status')
+        REDIS_ERROR=$(echo $HEALTH_RESPONSE | jq -r '.services.redis.error')
+        
+        echo ""
+        echo "=== Service Status ==="
+        echo "Overall: $OVERALL_STATUS"
+        echo "MySQL: $MYSQL_STATUS"
+        if [ "$MYSQL_ERROR" != "null" ]; then
+          echo "  Error: $MYSQL_ERROR"
+        fi
+        echo "Redis: $REDIS_STATUS"
+        if [ "$REDIS_ERROR" != "null" ]; then
+          echo "  Error: $REDIS_ERROR"
+        fi
+        
+        # Fail if MySQL is not connected
+        if [ "$MYSQL_STATUS" != "connected" ]; then
+          echo ""
+          echo "❌ DEPLOYMENT FAILED: MySQL not connected!"
+          echo "Error: $MYSQL_ERROR"
+          echo ""
+          echo "Troubleshooting:"
+          echo "1. Check if DB_PASSWORD secret is set correctly"
+          echo "2. SSH to VM: ssh ubuntu@$INSTANCE_IP"
+          echo "3. Check MySQL logs: docker logs mysql"
+          echo "4. Check server logs: docker logs payment-server"
+          exit 1
+        fi
+        
+        # Fail if Redis is not connected
+        if [ "$REDIS_STATUS" != "connected" ]; then
+          echo ""
+          echo "❌ DEPLOYMENT FAILED: Redis not connected!"
+          echo "Error: $REDIS_ERROR"
+          echo ""
+          echo "Troubleshooting:"
+          echo "1. SSH to VM: ssh ubuntu@$INSTANCE_IP"
+          echo "2. Check Redis logs: docker logs redis"
+          echo "3. Check server logs: docker logs payment-server"
+          exit 1
+        fi
+        
+        echo ""
         echo "✅ Node.js server healthy"
         
-        echo "Checking Spring Boot client..."
-        curl -sf http://$INSTANCE_IP:8080/actuator/health || exit 1
+        echo ""
+        echo "=== Checking Spring Boot Client ==="
+        DASHBOARD_HEALTH=$(curl -s http://$INSTANCE_IP:8080/actuator/health)
+        echo $DASHBOARD_HEALTH | jq .
+        
+        DASHBOARD_STATUS=$(echo $DASHBOARD_HEALTH | jq -r '.status')
+        if [ "$DASHBOARD_STATUS" != "UP" ]; then
+          echo "❌ Spring Boot client not healthy: $DASHBOARD_STATUS"
+          exit 1
+        fi
+        
         echo "✅ Spring Boot client healthy"
         
         echo ""
-        echo "✅ Deployment successful!"
+        echo "====================================="
+        echo "✅ DEPLOYMENT SUCCESSFUL!"
+        echo "====================================="
         echo "🔵 Node.js Server: http://$INSTANCE_IP:9292"
-        echo "🟢 Spring Boot Client: http://$INSTANCE_IP:8080"
+        echo "🟢 Spring Boot Dashboard: http://$INSTANCE_IP:8080"
+        echo "🟢 MySQL: $MYSQL_STATUS"
+        echo "🔴 Redis: $REDIS_STATUS"
+        echo "====================================="
