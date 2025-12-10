@@ -286,24 +286,28 @@ jobs:
       run: |
         echo "Waiting for Docker installation and container startup..."
         echo "Instance IP: $INSTANCE_IP"
+        echo "This may take 5-7 minutes (Docker install + MySQL init + image pull)"
         
-        # Wait for Docker setup (much faster than Maven build)
-        sleep 120
+        # Wait for cloud-init and Docker setup
+        echo "Waiting 3 minutes for Docker installation..."
+        sleep 180
         
         # Wait for health endpoint with better feedback
-        for i in {1..30}; do
-          echo "Attempt $i/30: Checking http://$INSTANCE_IP:9292/health"
-          if curl -f -m 5 http://$INSTANCE_IP:9292/health 2>/dev/null; then
+        echo "Checking service health (up to 5 minutes)..."
+        for i in {1..60}; do
+          echo "Attempt $i/60: Checking http://$INSTANCE_IP:30092/health"
+          if curl -f -m 5 http://$INSTANCE_IP:30092/health 2>/dev/null; then
             echo "✅ Services ready!"
             exit 0
           fi
-          sleep 10
+          sleep 5
         done
         
         echo "⚠️ Service did not start in time. Check logs manually:"
-        echo "ssh ubuntu@$INSTANCE_IP"
-        echo "sudo docker logs payment-server"
-        echo "sudo docker logs payment-dashboard"
+        echo "ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
+        echo "kubectl get pods -n hermes"
+        echo "kubectl logs -n hermes -l app=payment-server"
+        echo "kubectl logs -n hermes -l app=mysql"
         exit 1
     
     - name: Health Check
@@ -311,8 +315,8 @@ jobs:
         echo "=== Checking Node.js Server Health ==="
         
         # Get health response (allow non-200 status codes)
-        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:9292/health)
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:9292/health)
+        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:30092/health)
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:30092/health)
         
         echo "HTTP Status: $HTTP_CODE"
         echo "Response:"
@@ -345,9 +349,9 @@ jobs:
           echo ""
           echo "Troubleshooting:"
           echo "1. Check if DB_PASSWORD secret is set correctly"
-          echo "2. SSH to VM: ssh ubuntu@$INSTANCE_IP"
-          echo "3. Check MySQL logs: docker logs mysql"
-          echo "4. Check server logs: docker logs payment-server"
+          echo "2. SSH to VM: ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
+          echo "3. Check MySQL logs: kubectl logs -n hermes -l app=mysql"
+          echo "4. Check server logs: kubectl logs -n hermes -l app=payment-server"
           exit 1
         fi
         
@@ -358,9 +362,9 @@ jobs:
           echo "Error: $REDIS_ERROR"
           echo ""
           echo "Troubleshooting:"
-          echo "1. SSH to VM: ssh ubuntu@$INSTANCE_IP"
-          echo "2. Check Redis logs: docker logs redis"
-          echo "3. Check server logs: docker logs payment-server"
+          echo "1. SSH to VM: ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
+          echo "2. Check Redis logs: kubectl logs -n hermes -l app=redis"
+          echo "3. Check server logs: kubectl logs -n hermes -l app=payment-server"
           exit 1
         fi
         
@@ -369,7 +373,7 @@ jobs:
         
         echo ""
         echo "=== Checking Spring Boot Client ==="
-        DASHBOARD_HEALTH=$(curl -s http://$INSTANCE_IP:8080/actuator/health)
+        DASHBOARD_HEALTH=$(curl -s http://$INSTANCE_IP:30080/actuator/health)
         echo $DASHBOARD_HEALTH | jq .
         
         DASHBOARD_STATUS=$(echo $DASHBOARD_HEALTH | jq -r '.status')
@@ -384,8 +388,8 @@ jobs:
         echo "====================================="
         echo "✅ DEPLOYMENT SUCCESSFUL!"
         echo "====================================="
-        echo "🔵 Node.js Server: http://$INSTANCE_IP:9292"
-        echo "🟢 Spring Boot Dashboard: http://$INSTANCE_IP:8080"
+        echo "🔵 Node.js Server: http://$INSTANCE_IP:30092"
+        echo "🟢 Spring Boot Dashboard: http://$INSTANCE_IP:30080"
         echo "🟢 MySQL: $MYSQL_STATUS"
         echo "🔴 Redis: $REDIS_STATUS"
         echo "====================================="

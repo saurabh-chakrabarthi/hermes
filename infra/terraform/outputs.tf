@@ -21,17 +21,17 @@ output "instance_state" {
 output "security_validation" {
   description = "Security rules validation status"
   value = {
-    port_22_ssh      = local.port_22_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
-    port_8080_dashboard = local.port_8080_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
-    port_9292_server = local.port_9292_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
-    all_ports_open   = local.security_validation_passed ? "✅ ALL REQUIRED PORTS OPEN" : "❌ SOME PORTS BLOCKED"
+    port_22_ssh          = local.port_22_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
+    port_30080_dashboard = local.port_30080_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
+    port_30092_server    = local.port_30092_allowed ? "✅ ALLOWED" : "❌ BLOCKED"
+    all_ports_open       = local.security_validation_passed ? "✅ ALL REQUIRED PORTS OPEN" : "❌ SOME PORTS BLOCKED"
   }
 }
 
 output "deployment_urls" {
   description = "Application URLs"
   value = {
-    payment_server = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip}:9292"
-    dashboard      = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip}:8080"
+    payment_server = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip}:30092"
+    dashboard      = "http://${local.should_create_instance ? oci_core_instance.hermes_instance[0].public_ip : local.existing_public_ip}:30080"
   }
 }

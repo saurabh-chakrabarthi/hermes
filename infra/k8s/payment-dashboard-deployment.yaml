@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-dashboard
+  namespace: hermes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-dashboard
+  template:
+    metadata:
+      labels:
+        app: payment-dashboard
+    spec:
+      containers:
+      - name: payment-dashboard
+        image: ghcr.io/GITHUB_OWNER/hermes-payment-dashboard:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PAYMENT_SERVER_URL
+          value: "http://payment-server:9292"
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"

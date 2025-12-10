@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-server-config
+  namespace: hermes
+data:
+  PORT: "9292"
+  NODE_ENV: "production"
+  DB_HOST: "mysql"
+  DB_USER: "root"
+  DB_NAME: "hermes_payments"
+  REDIS_URL: "redis://redis:6379"

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-server
+  namespace: hermes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-server
+  template:
+    metadata:
+      labels:
+        app: payment-server
+    spec:
+      containers:
+      - name: payment-server
+        image: ghcr.io/GITHUB_OWNER/hermes-payment-server:latest
+        ports:
+        - containerPort: 9292
+        envFrom:
+        - configMapRef:
+            name: payment-server-config
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 9292
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9292
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9292
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
