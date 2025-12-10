@@ -100,6 +100,7 @@ resource "oci_core_instance" "hermes_instance" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
+    deployment_trigger  = var.deployment_trigger
     user_data = base64encode(templatefile("${path.module}/../scripts/setup-docker.sh", {
       GITHUB_OWNER = var.github_owner
       DB_PASSWORD  = var.db_password
