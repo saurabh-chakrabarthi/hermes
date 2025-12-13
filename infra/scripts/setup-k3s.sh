@@ -47,11 +47,11 @@ echo "Downloading Kubernetes manifests..."
 mkdir -p /home/ubuntu/k8s
 cd /home/ubuntu/k8s
 
-BASE_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/Hermes-Payment-Remittance-Portal/main/infra/k8s"
+REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/Hermes-Payment-Remittance-Portal/main/infra/k8s"
 for file in mysql-service mysql-statefulset redis-service redis-deployment \
             payment-server-configmap payment-server-service payment-server-deployment \
             payment-dashboard-service payment-dashboard-deployment; do
-  curl -fsSL "${BASE_URL}/${file}.yaml" -o "${file}.yaml"
+  curl -fsSL "$REPO_URL/$file.yaml" -o "$file.yaml"
 done
 
 # Replace GITHUB_OWNER placeholder
