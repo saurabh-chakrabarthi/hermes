@@ -1,8 +1,6 @@
-# Update security list to allow NodePort access
-resource "oci_core_security_list" "hermes_security_list" {
-  compartment_id = var.compartment_id
-  vcn_id         = data.oci_core_vcns.existing_vcn.virtual_networks[0].id
-  display_name   = "hermes-security-list"
+# Update existing default security list to allow NodePort access
+resource "oci_core_default_security_list" "hermes_default_security_list" {
+  manage_default_resource_id = data.oci_core_subnets.existing_subnet.subnets[0].security_list_ids[0]
 
   # Allow SSH
   ingress_security_rules {
@@ -49,26 +47,5 @@ resource "oci_core_security_list" "hermes_security_list" {
     destination = "0.0.0.0/0"
     stateless   = false
     description = "Allow all outbound"
-  }
-}
-
-# Attach security list to subnet
-data "oci_core_subnet" "hermes_subnet" {
-  subnet_id = data.oci_core_subnets.existing_subnet.subnets[0].id
-}
-
-resource "oci_core_subnet" "hermes_subnet_update" {
-  cidr_block     = data.oci_core_subnet.hermes_subnet.cidr_block
-  compartment_id = var.compartment_id
-  vcn_id         = data.oci_core_vcns.existing_vcn.virtual_networks[0].id
-  display_name   = data.oci_core_subnet.hermes_subnet.display_name
-  
-  security_list_ids = concat(
-    data.oci_core_subnet.hermes_subnet.security_list_ids,
-    [oci_core_security_list.hermes_security_list.id]
-  )
-
-  lifecycle {
-    ignore_changes = [defined_tags, freeform_tags]
   }
 }
