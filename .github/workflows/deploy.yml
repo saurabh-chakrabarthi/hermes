@@ -226,6 +226,45 @@ jobs:
         
         echo "✅ All required secrets are set"
     
+    - name: Check Instance Metadata
+      id: check_instance
+      run: |
+        export PATH="$HOME/bin:$PATH"
+        echo "Checking existing instance metadata..."
+        
+        INSTANCE_ID=$(oci compute instance list \
+          --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} \
+          --display-name "hermes-payment-portal" \
+          --lifecycle-state RUNNING \
+          --query "data[0].id" \
+          --raw-output 2>/dev/null || echo "")
+        
+        if [ ! -z "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "null" ]; then
+          echo "Found existing instance: $INSTANCE_ID"
+          
+          # Get current deployment_trigger from instance metadata
+          CURRENT_TRIGGER=$(oci compute instance get \
+            --instance-id $INSTANCE_ID \
+            --query 'data."metadata"."deployment_trigger"' \
+            --raw-output 2>/dev/null || echo "")
+          
+          echo "Current deployment_trigger: $CURRENT_TRIGGER"
+          echo "New deployment_trigger: 4"
+          
+          if [ "$CURRENT_TRIGGER" != "4" ]; then
+            echo "Deployment trigger changed - terminating instance..."
+            oci compute instance terminate --instance-id $INSTANCE_ID --force --wait-for-state TERMINATED
+            echo "✅ Instance terminated"
+            echo "recreate=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Instance already up to date"
+            echo "recreate=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "No existing instance found - will create new one"
+          echo "recreate=true" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Deploy Infrastructure
       working-directory: ./infra/terraform
       env:
