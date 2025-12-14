@@ -47,7 +47,7 @@ echo "Downloading Kubernetes manifests..."
 mkdir -p /home/ubuntu/k8s
 cd /home/ubuntu/k8s
 
-REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/Hermes-Payment-Remittance-Portal/main/infra/k8s"
+REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/hermes/main/infra/k8s"
 for file in mysql-service mysql-statefulset redis-service redis-deployment \
             payment-server-configmap payment-server-service payment-server-deployment \
             payment-dashboard-service payment-dashboard-deployment; do
