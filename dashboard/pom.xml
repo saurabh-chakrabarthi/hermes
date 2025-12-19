@@ -24,38 +24,33 @@
         <exec.mainClass>com.payment.dashboard.Application</exec.mainClass>
     </properties>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>io.micronaut</groupId>
-                <artifactId>micronaut-bom</artifactId>
-                <version>${micronaut.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    <!-- Note: Do not import a BOM here to avoid resolution issues during Docker build;
+         pin versions for critical dependencies below where necessary. -->
 
     <dependencies>
         <!-- Micronaut Core -->
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-inject</artifactId>
+            <version>${micronaut.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-validation</artifactId>
+            <version>${micronaut.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-http-server-netty</artifactId>
+            <version>${micronaut.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-http-client</artifactId>
+            <version>${micronaut.version}</version>
             <scope>compile</scope>
         </dependency>
 
@@ -63,6 +58,7 @@
         <dependency>
             <groupId>io.micronaut.views</groupId>
             <artifactId>micronaut-views-thymeleaf</artifactId>
+            <version>5.0.1</version>
             <scope>compile</scope>
         </dependency>
 
@@ -70,6 +66,7 @@
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-jackson-databind</artifactId>
+            <version>${micronaut.version}</version>
             <scope>compile</scope>
         </dependency>
 
@@ -84,6 +81,7 @@
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-management</artifactId>
+            <version>${micronaut.version}</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
