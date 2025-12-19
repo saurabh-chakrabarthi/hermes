@@ -1,96 +1,75 @@
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
-const { pool, redisClient } = require('./db/connection');
+const { connectDB, getDB } = require('./db/connection');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CACHE_TTL = 300; // 5 minutes
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+// Initialize MongoDB connection
+let dbReady = false;
+connectDB().then(() => {
+  dbReady = true;
+}).catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
+  process.exit(1);
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   const estTime = new Date().toLocaleString("sv-SE", {timeZone: "America/New_York"}).replace(' ', 'T') + '-05:00';
   
   let overallStatus = 'ok';
-  let mysqlStatus = 'disconnected';
-  let mysqlError = null;
-  let redisStatus = 'disconnected';
-  let redisError = null;
+  let mongoStatus = 'disconnected';
+  let mongoError = null;
   
-  // Test MySQL connection
+  // Test MongoDB connection
   try {
-    await pool.query('SELECT 1');
-    mysqlStatus = 'connected';
-  } catch (err) {
-    mysqlStatus = 'error';
-    mysqlError = err.message;
-    overallStatus = 'degraded';
-    console.error('MySQL health check failed:', err);
-  }
-  
-  // Test Redis connection
-  try {
-    if (redisClient.isOpen) {
-      await redisClient.ping();
-      redisStatus = 'connected';
+    if (dbReady) {
+      const db = getDB();
+      await db.admin().ping();
+      mongoStatus = 'connected';
     } else {
-      redisStatus = 'disconnected';
-      redisError = 'Redis client not open';
+      mongoStatus = 'initializing';
       overallStatus = 'degraded';
     }
   } catch (err) {
-    redisStatus = 'error';
-    redisError = err.message;
+    mongoStatus = 'error';
+    mongoError = err.message;
     overallStatus = 'degraded';
-    console.error('Redis health check failed:', err);
+    console.error('MongoDB health check failed:', err);
   }
   
   const response = { 
     status: overallStatus,
     timestamp: estTime,
     services: {
-      mysql: {
-        status: mysqlStatus,
-        error: mysqlError
-      },
-      redis: {
-        status: redisStatus,
-        error: redisError
+      mongodb: {
+        status: mongoStatus,
+        error: mongoError
       }
     }
   };
   
-  // Return 503 if any service is down
   const statusCode = overallStatus === 'ok' ? 200 : 503;
   res.status(statusCode).json(response);
 });
 
-// Get all payments with caching
+// Get all payments
 app.get('/api/bookings', async (req, res) => {
   try {
-    // Try cache first
-    const cached = await redisClient.get('payments:all');
-    if (cached) {
-      console.log('📦 Cache hit: payments');
-      return res.json(JSON.parse(cached));
-    }
+    const db = getDB();
+    const payments = await db.collection('payments')
+      .find()
+      .sort({ createdAt: -1 })
+      .toArray();
 
-    // Query database
-    const [rows] = await pool.query(`
-      SELECT * FROM payments 
-      ORDER BY created_at DESC
-    `);
-
-    // Cache the result
-    await redisClient.setEx('payments:all', CACHE_TTL, JSON.stringify(rows));
-    console.log('💾 Cache miss: payments (cached for 5min)');
-
-    res.json(rows);
+    res.json(payments);
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({ error: 'Failed to fetch payments' });
@@ -99,11 +78,9 @@ app.get('/api/bookings', async (req, res) => {
 
 // Create new payment
 app.post('/api/bookings', async (req, res) => {
-  const connection = await pool.getConnection();
-  
   try {
-    await connection.beginTransaction();
-
+    const db = getDB();
+    
     const tuitionAmount = parseFloat(req.body.amount);
     const randomFactor = 0.8 + (Math.random() * 0.4);
     const amountReceived = Math.round(tuitionAmount * randomFactor * 100) / 100;
@@ -121,56 +98,48 @@ app.post('/api/bookings', async (req, res) => {
     if (amountReceived < tuitionAmount) status = 'UNDERPAYMENT';
     else if (amountReceived > tuitionAmount) status = 'OVERPAYMENT';
 
-    const paymentId = uuidv4();
-    
     // Get next reference number
-    const [refResult] = await connection.query(
-      'SELECT COUNT(*) as count FROM payments'
-    );
-    const refNumber = 'REF' + (refResult[0].count + 1).toString().padStart(3, '0');
+    const count = await db.collection('payments').countDocuments();
+    const refNumber = 'REF' + (count + 1).toString().padStart(3, '0');
 
-    // Insert payment
-    await connection.query(`
-      INSERT INTO payments (
-        id, reference, name, email, amount, amount_received, 
-        school, sender_full_name, country_from, sender_address, 
-        currency_from, student_id, status, fee_percentage, 
-        fee_amount, final_amount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      paymentId, refNumber, req.body.name, req.body.email,
-      tuitionAmount, amountReceived, req.body.school || 'Unknown',
-      req.body.name, req.body.country_from || 'Unknown',
-      req.body.sender_address || 'Unknown', req.body.currency_from || 'usd',
-      req.body.student_id || 'Unknown', status, feePercentage,
-      feeAmount, finalAmount
-    ]);
+    // Create payment document
+    const payment = {
+      _id: uuidv4(),
+      reference: refNumber,
+      name: req.body.name,
+      email: req.body.email,
+      amount: tuitionAmount,
+      amountReceived: amountReceived,
+      school: req.body.school || 'Unknown',
+      senderFullName: req.body.name,
+      countryFrom: req.body.country_from || 'Unknown',
+      senderAddress: req.body.sender_address || 'Unknown',
+      currencyFrom: req.body.currency_from || 'usd',
+      studentId: req.body.student_id || 'Unknown',
+      status: status,
+      feePercentage: feePercentage,
+      feeAmount: feeAmount,
+      finalAmount: finalAmount,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await db.collection('payments').insertOne(payment);
 
     // Insert audit log
-    await connection.query(`
-      INSERT INTO audit_log (payment_id, action, new_value, user_agent, ip_address)
-      VALUES (?, 'CREATE', ?, ?, ?)
-    `, [
-      paymentId, JSON.stringify(req.body),
-      req.headers['user-agent'], req.ip
-    ]);
+    await db.collection('audit_log').insertOne({
+      paymentId: payment._id,
+      action: 'CREATE',
+      newValue: req.body,
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+      createdAt: new Date()
+    });
 
-    await connection.commit();
-
-    // Invalidate cache
-    await redisClient.del('payments:all');
-
-    const [payment] = await connection.query(
-      'SELECT * FROM payments WHERE id = ?', [paymentId]
-    );
-
-    res.status(201).json(payment[0]);
+    res.status(201).json(payment);
   } catch (error) {
-    await connection.rollback();
     console.error('Error creating payment:', error);
     res.status(500).json({ error: 'Failed to create payment' });
-  } finally {
-    connection.release();
   }
 });
 
@@ -179,11 +148,9 @@ app.get('/', (req, res) => res.redirect('/payment'));
 app.get('/payment', (req, res) => res.sendFile(__dirname + '/public/booking.html'));
 
 app.post('/payment', async (req, res) => {
-  const connection = await pool.getConnection();
-  
   try {
-    await connection.beginTransaction();
-
+    const db = getDB();
+    
     const tuitionAmount = parseFloat(req.body.amount);
     const randomFactor = 0.8 + (Math.random() * 0.4);
     const amountReceived = Math.round(tuitionAmount * randomFactor * 100) / 100;
@@ -199,39 +166,36 @@ app.post('/payment', async (req, res) => {
     if (amountReceived < tuitionAmount) status = 'UNDERPAYMENT';
     else if (amountReceived > tuitionAmount) status = 'OVERPAYMENT';
 
-    const paymentId = uuidv4();
-    
-    const [refResult] = await connection.query(
-      'SELECT COUNT(*) as count FROM payments'
-    );
-    const refNumber = 'REF' + (refResult[0].count + 1).toString().padStart(3, '0');
+    const count = await db.collection('payments').countDocuments();
+    const refNumber = 'REF' + (count + 1).toString().padStart(3, '0');
 
-    await connection.query(`
-      INSERT INTO payments (
-        id, reference, name, email, amount, amount_received, 
-        school, sender_full_name, country_from, sender_address, 
-        currency_from, student_id, status, fee_percentage, 
-        fee_amount, final_amount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      paymentId, refNumber, req.body.name, req.body.email,
-      tuitionAmount, amountReceived, req.body.school || 'Unknown',
-      req.body.name, req.body.country_from || 'Unknown',
-      req.body.sender_address || 'Unknown', req.body.currency_from || 'usd',
-      req.body.student_id || 'Unknown', status, feePercentage,
-      feeAmount, finalAmount
-    ]);
+    const payment = {
+      _id: uuidv4(),
+      reference: refNumber,
+      name: req.body.name,
+      email: req.body.email,
+      amount: tuitionAmount,
+      amountReceived: amountReceived,
+      school: req.body.school || 'Unknown',
+      senderFullName: req.body.name,
+      countryFrom: req.body.country_from || 'Unknown',
+      senderAddress: req.body.sender_address || 'Unknown',
+      currencyFrom: req.body.currency_from || 'usd',
+      studentId: req.body.student_id || 'Unknown',
+      status: status,
+      feePercentage: feePercentage,
+      feeAmount: feeAmount,
+      finalAmount: finalAmount,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    await connection.commit();
-    await redisClient.del('payments:all');
+    await db.collection('payments').insertOne(payment);
 
     res.sendFile(__dirname + '/public/confirmation.html');
   } catch (error) {
-    await connection.rollback();
     console.error('Error creating payment:', error);
     res.status(500).send('Error processing payment');
-  } finally {
-    connection.release();
   }
 });
 

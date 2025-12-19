@@ -1,47 +1,44 @@
-const mysql = require('mysql2/promise');
-const redis = require('redis');
+const { MongoClient } = require('mongodb');
 
-// MySQL connection pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'hermes_payments',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0
-});
+// Build MongoDB URI from components
+const MONGODB_USER = process.env.MONGODB_USER || 'hermes_db_user';
+const MONGODB_PASSWORD = process.env.MONGODB_PASSWORD;
+const MONGODB_CLUSTER = process.env.MONGODB_CLUSTER || 'hermescluster.mf0xovo.mongodb.net';
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'hermes_payments';
 
-// Redis client
-const redisClient = redis.createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-  socket: {
-    reconnectStrategy: (retries) => Math.min(retries * 50, 500)
-  }
-});
+const uri = `mongodb+srv://${MONGODB_USER}:${MONGODB_PASSWORD}@${MONGODB_CLUSTER}/?appName=HermesCluster`;
+const client = new MongoClient(uri);
 
-redisClient.on('error', (err) => console.error('Redis Client Error:', err));
-redisClient.on('connect', () => console.log('✅ Redis connected'));
+let db;
 
-// Connect Redis
-(async () => {
+async function connectDB() {
   try {
-    await redisClient.connect();
-  } catch (err) {
-    console.error('Failed to connect to Redis:', err);
+    await client.connect();
+    db = client.db(MONGODB_DATABASE);
+    console.log('✅ MongoDB connected successfully');
+    
+    // Create indexes for better performance
+    await db.collection('payments').createIndex({ reference: 1 }, { unique: true });
+    await db.collection('payments').createIndex({ email: 1 });
+    await db.collection('payments').createIndex({ createdAt: -1 });
+    
+    return db;
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error);
+    throw error;
   }
-})();
+}
 
-// Test MySQL connection
-pool.getConnection()
-  .then(conn => {
-    console.log('✅ MySQL connected');
-    conn.release();
-  })
-  .catch(err => {
-    console.error('❌ MySQL connection failed:', err.message);
-  });
+function getDB() {
+  if (!db) {
+    throw new Error('Database not initialized. Call connectDB first.');
+  }
+  return db;
+}
 
-module.exports = { pool, redisClient };
+process.on('SIGINT', async () => {
+  await client.close();
+  process.exit(0);
+});
+
+module.exports = { connectDB, getDB };

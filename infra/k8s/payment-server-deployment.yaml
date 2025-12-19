@@ -22,11 +22,11 @@ spec:
         - configMapRef:
             name: payment-server-config
         env:
-        - name: DB_PASSWORD
+        - name: MONGODB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: mysql-secret
-              key: MYSQL_ROOT_PASSWORD
+              name: mongodb-secret
+              key: MONGODB_PASSWORD
         startupProbe:
           httpGet:
             path: /health

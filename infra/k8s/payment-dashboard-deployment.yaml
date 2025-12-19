@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: payment-dashboard
-        image: ghcr.io/GITHUB_OWNER/hermes-payment-dashboard:latest
+        image: ghcr.io/GITHUB_OWNER/hermes-payment-dashboard-micronaut:latest
         ports:
         - containerPort: 8080
         env:

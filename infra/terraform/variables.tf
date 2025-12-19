@@ -14,11 +14,10 @@ variable "ssh_public_key" {
   type        = string
 }
 
-variable "db_password" {
-  description = "MySQL database password"
+variable "mongodb_password" {
+  description = "MongoDB password"
   type        = string
   sensitive   = true
-  default     = "ChangeMe123!"
 }
 
 variable "user_ocid" {
@@ -45,11 +44,13 @@ variable "tenancy_ocid" {
 variable "deployment_trigger" {
   description = "Trigger to force instance replacement"
   type        = string
-  default     = "5"
+  default     = "6"
 }
 
 variable "github_owner" {
   description = "GitHub repository owner for container registry"
   type        = string
 }
+
+
 

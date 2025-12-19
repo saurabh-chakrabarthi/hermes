@@ -37,34 +37,39 @@ chmod 600 /home/ubuntu/.kube/config
 # Create namespace
 kubectl create namespace hermes || true
 
-# Create secret for DB password
-kubectl create secret generic mysql-secret \
-  --from-literal=MYSQL_ROOT_PASSWORD="${DB_PASSWORD}" \
+# Create secret for MongoDB password
+kubectl create secret generic mongodb-secret \
+  --from-literal=MONGODB_PASSWORD="${MONGODB_PASSWORD}" \
   --namespace=hermes || true
 
-# Download K8s manifests from GitHub
-echo "Downloading Kubernetes manifests..."
+# Download MongoDB properties
+echo "Downloading MongoDB configuration..."
 mkdir -p /home/ubuntu/k8s
 cd /home/ubuntu/k8s
 
+REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/hermes/main/infra"
+curl -fsSL "$REPO_URL/mongodb.properties" -o mongodb.properties
+
+# Load MongoDB properties
+source mongodb.properties
+
+# Download K8s manifests
+echo "Downloading Kubernetes manifests..."
 REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/hermes/main/infra/k8s"
-for file in mysql-service mysql-statefulset redis-service redis-deployment \
-            payment-server-configmap payment-server-service payment-server-deployment \
+for file in payment-server-configmap payment-server-service payment-server-deployment \
             payment-dashboard-service payment-dashboard-deployment; do
   curl -fsSL "$REPO_URL/$file.yaml" -o "$file.yaml"
 done
 
-# Replace GITHUB_OWNER placeholder
+# Replace placeholders
 sed -i "s|GITHUB_OWNER|${GITHUB_OWNER}|g" payment-server-deployment.yaml
 sed -i "s|GITHUB_OWNER|${GITHUB_OWNER}|g" payment-dashboard-deployment.yaml
+sed -i "s|MONGODB_USER_PLACEHOLDER|${MONGODB_USER}|g" payment-server-configmap.yaml
+sed -i "s|MONGODB_CLUSTER_PLACEHOLDER|${MONGODB_CLUSTER}|g" payment-server-configmap.yaml
+sed -i "s|MONGODB_DATABASE_PLACEHOLDER|${MONGODB_DATABASE}|g" payment-server-configmap.yaml
 
-# Apply manifests in order
+# Apply manifests
 echo "Applying Kubernetes manifests..."
-kubectl apply -f mysql-service.yaml
-kubectl apply -f mysql-statefulset.yaml
-kubectl apply -f redis-service.yaml
-kubectl apply -f redis-deployment.yaml
-sleep 30
 kubectl apply -f payment-server-configmap.yaml
 kubectl apply -f payment-server-service.yaml
 kubectl apply -f payment-server-deployment.yaml

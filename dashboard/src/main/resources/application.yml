@@ -1,0 +1,19 @@
+micronaut:
+  application:
+    name: payment-dashboard
+  server:
+    port: 8080
+  views:
+    thymeleaf:
+      enabled: true
+  http:
+    client:
+      read-timeout: 30s
+
+payment-server:
+  base-url: ${PAYMENT_SERVER_URL:http://payment-server:9292}
+
+endpoints:
+  health:
+    enabled: true
+    sensitive: false
