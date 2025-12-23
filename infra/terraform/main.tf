@@ -104,6 +104,9 @@ resource "oci_core_instance" "hermes_instance" {
     user_data = base64encode(templatefile("${path.module}/../scripts/setup-k3s.sh", {
       GITHUB_OWNER      = var.github_owner
       MONGODB_PASSWORD  = var.mongodb_password
+      MONGODB_USER      = var.mongodb_user
+      MONGODB_CLUSTER   = var.mongodb_cluster
+      MONGODB_DATABASE  = var.mongodb_database
     }))
   }
 

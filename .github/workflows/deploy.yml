@@ -225,6 +225,24 @@ jobs:
         fi
         
         echo "✅ All required secrets are set"
+
+        if [ -z "${{ secrets.MONGODB_CLUSTER }}" ]; then
+          echo "❌ ERROR: MONGODB_CLUSTER secret is not set!"
+          echo "Please add MONGODB_CLUSTER to GitHub Secrets"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.MONGODB_USER }}" ]; then
+          echo "❌ ERROR: MONGODB_USER secret is not set!"
+          echo "Please add MONGODB_USER to GitHub Secrets"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.MONGODB_DATABASE }}" ]; then
+          echo "❌ ERROR: MONGODB_DATABASE secret is not set!"
+          echo "Please add MONGODB_DATABASE to GitHub Secrets"
+          exit 1
+        fi
     
     - name: Check Instance Metadata
       id: check_instance
@@ -276,6 +294,9 @@ jobs:
         TF_VAR_compartment_id: ${{ secrets.OCI_COMPARTMENT_ID }}
         TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         TF_VAR_mongodb_password: ${{ secrets.MONGODB_PASSWORD }}
+        TF_VAR_mongodb_cluster: ${{ secrets.MONGODB_CLUSTER }}
+        TF_VAR_mongodb_user: ${{ secrets.MONGODB_USER }}
+        TF_VAR_mongodb_database: ${{ secrets.MONGODB_DATABASE }}
         TF_VAR_github_owner: ${{ github.repository_owner }}
       run: |
         export PATH="$HOME/bin:$PATH"

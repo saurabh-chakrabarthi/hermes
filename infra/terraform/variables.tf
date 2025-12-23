@@ -52,5 +52,20 @@ variable "github_owner" {
   type        = string
 }
 
+variable "mongodb_user" {
+  description = "MongoDB username"
+  type        = string
+}
+
+variable "mongodb_cluster" {
+  description = "MongoDB cluster host"
+  type        = string
+}
+
+variable "mongodb_database" {
+  description = "MongoDB database name"
+  type        = string
+}
+
 
 
