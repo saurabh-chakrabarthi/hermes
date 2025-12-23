@@ -1,9 +1,9 @@
 package com.payment.dashboard.dto;
 
-import io.micronaut.serde.annotation.Serdeable;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
 
-@Serdeable
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BookingDTO {
     private String reference;
     private BigDecimal amount;
