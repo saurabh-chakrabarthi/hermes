@@ -2,24 +2,20 @@
 
 ## Before Deployment
 
-### ✅ OCI HeatWave MySQL Setup
+### ✅ MongoDB (Atlas) Setup
 
-- [ ] Created MySQL DB System in OCI Console
-- [ ] Shape: `MySQL.Free` (Always Free)
-- [ ] Storage: 50GB
-- [ ] Username: `admin`
-- [ ] Password: Same as `DB_PASSWORD` secret
-- [ ] VCN: `hermes-payment-portal-vcn`
-- [ ] Public endpoint enabled (or VPN configured)
-- [ ] Database is in `ACTIVE` state
-- [ ] Copied MySQL endpoint/IP address
+- [ ] MongoDB Atlas cluster created (or managed MongoDB hosted)
+- [ ] VPC / network access configured so the deployment VM can connect (allowlist IPs)
+- [ ] Username and password stored in GitHub Secrets (`MONGODB_USER`, `MONGODB_PASSWORD`)
+- [ ] `MONGODB_CLUSTER` and `MONGODB_DATABASE` set in GitHub Secrets (or passed to Terraform)
+- [ ] Application will use the provided Atlas connection string: `mongodb+srv://<user>:<password>@<cluster>/<db>`
 
-### ✅ Database Schema
+### ✅ Database Schema / Data
 
-- [ ] Connected to MySQL: `mysql -h <ENDPOINT> -u admin -p`
-- [ ] Created database: `CREATE DATABASE hermes_payments;`
-- [ ] Ran schema: `SOURCE server/db/schema.sql;`
-- [ ] Verified tables exist: `SHOW TABLES;`
+- [ ] Deployment attempts to create the database and an initial collection during VM setup (best-effort). If Atlas IP allowlist prevents direct creation, create the DB manually or allow the VM's IP.
+- [ ] If needed, connect with `mongosh` or `mongo`:
+  - `mongosh "mongodb+srv://<user>:<password>@<cluster>/<db>"`
+  - `use <db>; db.createCollection('payments');`
 
 ### ✅ GitHub Secrets
 

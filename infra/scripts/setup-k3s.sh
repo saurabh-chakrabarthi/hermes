@@ -53,6 +53,23 @@ curl -fsSL "$REPO_URL/mongodb.properties" -o mongodb.properties
 # Load MongoDB properties
 source mongodb.properties
 
+# Attempt to ensure MongoDB database exists (best-effort)
+echo "Ensuring MongoDB database exists (may fail if Atlas IP whitelist prevents connection)..."
+set +e
+# Install mongo client if missing
+apt-get install -y mongodb-clients || apt-get install -y mongodb-org-shell || true
+
+MONGO_URI="mongodb+srv://${MONGODB_USER}:${MONGODB_PASSWORD}@${MONGODB_CLUSTER}/${MONGODB_DATABASE}?retryWrites=true&w=majority"
+echo "Attempting to connect to MongoDB at ${MONGODB_CLUSTER}..."
+if command -v mongo >/dev/null 2>&1; then
+  mongo "$MONGO_URI" --eval "db.getSiblingDB('${MONGODB_DATABASE}').collection('init').insertOne({createdAt: new Date()})" >/dev/null 2>&1 || echo "Warning: could not create DB (check network/whitelist)"
+elif command -v mongosh >/dev/null 2>&1; then
+  mongosh "$MONGO_URI" --eval "db.getSiblingDB('${MONGODB_DATABASE}').collection('init').insertOne({createdAt: new Date()})" >/dev/null 2>&1 || echo "Warning: could not create DB (check network/whitelist)"
+else
+  echo "mongo client not available; skipping DB creation."
+fi
+set -e
+
 # Download K8s manifests
 echo "Downloading Kubernetes manifests..."
 REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/hermes/main/infra/k8s"
@@ -78,8 +95,6 @@ kubectl apply -f payment-dashboard-deployment.yaml
 
 # Wait for deployments
 echo "Waiting for deployments to be ready..."
-kubectl wait --for=condition=ready pod -l app=mysql -n hermes --timeout=300s || true
-kubectl wait --for=condition=ready pod -l app=redis -n hermes --timeout=120s || true
 kubectl wait --for=condition=ready pod -l app=payment-server -n hermes --timeout=300s || true
 kubectl wait --for=condition=ready pod -l app=payment-dashboard -n hermes --timeout=300s || true
 

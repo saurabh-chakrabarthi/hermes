@@ -226,6 +226,30 @@ jobs:
         
         echo "✅ All required secrets are set"
 
+        # Atlas secrets (optional for Atlas provisioning)
+        if [ -z "${{ secrets.ATLAS_PUBLIC_KEY }}" ]; then
+          echo "❌ ERROR: ATLAS_PUBLIC_KEY secret is not set!"
+          echo "Please add ATLAS_PUBLIC_KEY to GitHub Secrets"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.ATLAS_PRIVATE_KEY }}" ]; then
+          echo "❌ ERROR: ATLAS_PRIVATE_KEY secret is not set!"
+          echo "Please add ATLAS_PRIVATE_KEY to GitHub Secrets"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.ATLAS_PROJECT_ID }}" ]; then
+          echo "❌ ERROR: ATLAS_PROJECT_ID secret is not set!"
+          echo "Please add ATLAS_PROJECT_ID to GitHub Secrets"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.HERMES_STATIC_IP }}" ]; then
+          echo "❌ ERROR: HERMES_STATIC_IP secret is not set!"
+          echo "Please add HERMES_STATIC_IP to GitHub Secrets"
+          exit 1
+        fi
         if [ -z "${{ secrets.MONGODB_CLUSTER }}" ]; then
           echo "❌ ERROR: MONGODB_CLUSTER secret is not set!"
           echo "Please add MONGODB_CLUSTER to GitHub Secrets"
@@ -297,10 +321,14 @@ jobs:
         TF_VAR_mongodb_cluster: ${{ secrets.MONGODB_CLUSTER }}
         TF_VAR_mongodb_user: ${{ secrets.MONGODB_USER }}
         TF_VAR_mongodb_database: ${{ secrets.MONGODB_DATABASE }}
+        TF_VAR_atlas_public_key: ${{ secrets.ATLAS_PUBLIC_KEY }}
+        TF_VAR_atlas_private_key: ${{ secrets.ATLAS_PRIVATE_KEY }}
+        TF_VAR_atlas_project_id: ${{ secrets.ATLAS_PROJECT_ID }}
+        TF_VAR_hermes_static_ip: ${{ secrets.HERMES_STATIC_IP }}
         TF_VAR_github_owner: ${{ github.repository_owner }}
       run: |
         export PATH="$HOME/bin:$PATH"
-        
+
         # Debug: Check if variables are set
         echo "Checking Terraform variables:"
         echo "User OCID: ${TF_VAR_user_ocid:0:20}..."
@@ -310,7 +338,9 @@ jobs:
         echo "Private key first line: $(echo "$TF_VAR_private_key" | head -1)"
         echo "Private key last line: $(echo "$TF_VAR_private_key" | tail -1)"
         echo "Private key line count: $(echo "$TF_VAR_private_key" | wc -l)"
-        
+        echo "HERMES_STATIC_IP: $TF_VAR_hermes_static_ip"
+        echo "Atlas project id: $TF_VAR_atlas_project_id"
+
         terraform init
         terraform plan
         terraform apply -auto-approve
@@ -346,7 +376,7 @@ jobs:
       run: |
         echo "Waiting for Docker installation and container startup..."
         echo "Instance IP: $INSTANCE_IP"
-        echo "This may take 5-7 minutes (Docker install + MySQL init + image pull)"
+        echo "This may take 5-7 minutes (Docker install + MongoDB setup + image pull)"
         
         # Wait for cloud-init and Docker setup
         echo "Waiting 3 minutes for Docker installation..."

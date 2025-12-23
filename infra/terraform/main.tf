@@ -4,6 +4,10 @@ terraform {
       source  = "oracle/oci"
       version = "~> 5.0"
     }
+    mongodbatlas = {
+      source  = "mongodb/mongodbatlas"
+      version = "~> 1.4"
+    }
   }
   
   backend "local" {

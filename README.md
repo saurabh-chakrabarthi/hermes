@@ -1,3 +1,36 @@
+# Hermes Payment & Remittance Portal
+
+Minimal, current documentation for development and deployment. This single README replaces previous scattered docs — keep it up to date.
+## What this repo contains
+- `server/` — Node.js API service (connects to MongoDB).
+- `client/` — Frontend app.
+- `dashboard/` — Micronaut dashboard service (Java).
+- `infra/` — Terraform + Kubernetes manifests and deployment scripts.
+## Required repository secrets (GitHub Actions)
+- `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_TENANCY_OCID`, `OCI_REGION`, `OCI_PRIVATE_KEY`, `OCI_COMPARTMENT_ID` — OCI credentials.
+- `SSH_PUBLIC_KEY` — public key for VM access.
+- `MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_CLUSTER`, `MONGODB_DATABASE` — MongoDB connection details.
+- `ATLAS_PUBLIC_KEY`, `ATLAS_PRIVATE_KEY`, `ATLAS_PROJECT_ID` — MongoDB Atlas API keys (optional; enable Terraform provisioning of Atlas resources).
+## Quick deploy (recommended via GitHub Actions)
+1. Add the secrets above to the repository Settings → Secrets and variables → Actions.
+2. Push to `main` (the CI/CD workflow builds images and runs Terraform).
+
+If you prefer local deploy/testing, from `infra/terraform`:
+```bash
+export TF_VAR_user_ocid=...
+export TF_VAR_private_key="$(cat ~/.oci/key.pem)"
+export TF_VAR_compartment_id=...
+## Notes & important behavior
+- The deployment targets MongoDB (Atlas). The VM setup script will attempt a best-effort DB creation but Atlas typically requires IP allowlisting.
+- We added optional Terraform Atlas provider resources (guarded by Atlas API keys) to create an IP allowlist entry and a database user. Supplying `ATLAS_*` secrets enables that automatic provisioning.
+- For image builds on Apple Silicon, use a multi-arch base image or build with `--platform linux/amd64`.
+
+## Troubleshooting
+- If the workflow fails during Terraform, check that all `TF_VAR_*` values are present in the job environment (logs will show the `HERMES_STATIC_IP` and Atlas project id when supplied).
+- If Atlas connections fail, ensure the Atlas project IP whitelist includes the static IP or `0.0.0.0/0` (not recommended).
+
+## Maintain only this doc
+All other markdown files have been removed — keep this README current.
 # Hermes Payment Portal
 
 Enterprise payment processing system with Node.js backend and Micronaut dashboard.

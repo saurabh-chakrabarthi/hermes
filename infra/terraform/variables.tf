@@ -67,5 +67,31 @@ variable "mongodb_database" {
   type        = string
 }
 
+variable "atlas_public_key" {
+  description = "MongoDB Atlas API public key (optional, for provisioning via Terraform)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "atlas_private_key" {
+  description = "MongoDB Atlas API private key (optional, for provisioning via Terraform)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "atlas_project_id" {
+  description = "MongoDB Atlas project id (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "hermes_static_ip" {
+  description = "Static IP for the Hermes deployment (used to whitelist in Atlas). Provide without /32."
+  type        = string
+  default     = ""
+}
+
 
 
