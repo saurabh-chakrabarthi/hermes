@@ -105,8 +105,9 @@ resource "oci_core_instance" "hermes_instance" {
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     deployment_trigger  = var.deployment_trigger
-    user_data = base64encode(templatefile("${path.module}/../scripts/setup-k3s.sh", {
+    user_data = base64encode(templatefile("${path.module}/../scripts/setup-docker.sh", {
       GITHUB_OWNER      = var.github_owner
+      GITHUB_TOKEN      = var.github_token
       MONGODB_PASSWORD  = var.mongodb_password
       MONGODB_USER      = var.mongodb_user
       MONGODB_CLUSTER   = var.mongodb_cluster
@@ -127,7 +128,7 @@ data "oci_core_security_lists" "subnet_security_lists" {
 
 # Validate security rules
 locals {
-  required_ports = [22, 30080, 30092]
+  required_ports = [22, 8080, 9292]
   
   # Get all ingress rules from all security lists
   all_ingress_rules = flatten([
@@ -152,29 +153,29 @@ locals {
     )
   ])
   
-  port_30080_allowed = anytrue([
+  port_8080_allowed = anytrue([
     for rule in local.all_ingress_rules :
     rule.protocol == "6" && rule.source == "0.0.0.0/0" && (
       length(rule.tcp_options) == 0 || 
       anytrue([for opt in rule.tcp_options : 
-        (opt.min == 30080 && opt.max == 30080) || 
-        (opt.min <= 30080 && opt.max >= 30080)
+        (opt.min == 8080 && opt.max == 8080) || 
+        (opt.min <= 8080 && opt.max >= 8080)
       ])
     )
   ])
   
-  port_30092_allowed = anytrue([
+  port_9292_allowed = anytrue([
     for rule in local.all_ingress_rules :
     rule.protocol == "6" && rule.source == "0.0.0.0/0" && (
       length(rule.tcp_options) == 0 || 
       anytrue([for opt in rule.tcp_options : 
-        (opt.min == 30092 && opt.max == 30092) || 
-        (opt.min <= 30092 && opt.max >= 30092)
+        (opt.min == 9292 && opt.max == 9292) || 
+        (opt.min <= 9292 && opt.max >= 9292)
       ])
     )
   ])
   
-  security_validation_passed = local.port_22_allowed && local.port_30080_allowed && local.port_30092_allowed
+  security_validation_passed = local.port_22_allowed && local.port_8080_allowed && local.port_9292_allowed
 }
 
 

@@ -1,39 +1,6 @@
 # Hermes Payment & Remittance Portal
 
-Minimal, current documentation for development and deployment. This single README replaces previous scattered docs — keep it up to date.
-## What this repo contains
-- `server/` — Node.js API service (connects to MongoDB).
-- `client/` — Frontend app.
-- `dashboard/` — Micronaut dashboard service (Java).
-- `infra/` — Terraform + Kubernetes manifests and deployment scripts.
-## Required repository secrets (GitHub Actions)
-- `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_TENANCY_OCID`, `OCI_REGION`, `OCI_PRIVATE_KEY`, `OCI_COMPARTMENT_ID` — OCI credentials.
-- `SSH_PUBLIC_KEY` — public key for VM access.
-- `MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_CLUSTER`, `MONGODB_DATABASE` — MongoDB connection details.
-- `ATLAS_PUBLIC_KEY`, `ATLAS_PRIVATE_KEY`, `ATLAS_PROJECT_ID` — MongoDB Atlas API keys (optional; enable Terraform provisioning of Atlas resources).
-## Quick deploy (recommended via GitHub Actions)
-1. Add the secrets above to the repository Settings → Secrets and variables → Actions.
-2. Push to `main` (the CI/CD workflow builds images and runs Terraform).
-
-If you prefer local deploy/testing, from `infra/terraform`:
-```bash
-export TF_VAR_user_ocid=...
-export TF_VAR_private_key="$(cat ~/.oci/key.pem)"
-export TF_VAR_compartment_id=...
-## Notes & important behavior
-- The deployment targets MongoDB (Atlas). The VM setup script will attempt a best-effort DB creation but Atlas typically requires IP allowlisting.
-- We added optional Terraform Atlas provider resources (guarded by Atlas API keys) to create an IP allowlist entry and a database user. Supplying `ATLAS_*` secrets enables that automatic provisioning.
-- For image builds on Apple Silicon, use a multi-arch base image or build with `--platform linux/amd64`.
-
-## Troubleshooting
-- If the workflow fails during Terraform, check that all `TF_VAR_*` values are present in the job environment (logs will show the `HERMES_STATIC_IP` and Atlas project id when supplied).
-- If Atlas connections fail, ensure the Atlas project IP whitelist includes the static IP or `0.0.0.0/0` (not recommended).
-
-## Maintain only this doc
-All other markdown files have been removed — keep this README current.
-# Hermes Payment Portal
-
-Enterprise payment processing system with Node.js backend and Micronaut dashboard.
+Enterprise payment processing system with Node.js backend and Micronaut dashboard running on OCI Always Free Tier.
 
 ## Architecture
 
@@ -47,13 +14,13 @@ Enterprise payment processing system with Node.js backend and Micronaut dashboar
 ┌────────────▼─────────────────────┐
 │   OCI VM (1GB RAM, Free Tier)    │
 │   ┌──────────────────────────┐   │
-│   │   k3s Kubernetes         │   │
+│   │   Docker Compose         │   │
 │   │   ├── Node.js (100MB)    │   │
 │   │   └── Micronaut (50MB)   │   │
 │   └──────────────────────────┘   │
-│   NodePorts: 30092, 30080        │
-│   Memory Usage: ~150MB           │
-│   Free Memory: ~850MB            │
+│   Ports: 9292, 8080              │
+│   Memory Usage: ~200MB           │
+│   Free Memory: ~750MB            │
 └──────────────────────────────────┘
 ```
 
@@ -78,7 +45,7 @@ Enterprise payment processing system with Node.js backend and Micronaut dashboar
 - **UI**: Bootstrap 5
 
 ### Infrastructure
-- **Orchestration**: k3s (lightweight Kubernetes)
+- **Orchestration**: Docker Compose
 - **Containers**: Docker
 - **Registry**: GitHub Container Registry (ghcr.io)
 - **Cloud**: OCI Always Free Tier
@@ -97,24 +64,29 @@ Enterprise payment processing system with Node.js backend and Micronaut dashboar
 1. Go to https://www.mongodb.com/cloud/atlas/register
 2. Create free M0 cluster
 3. Create database user and password
-4. Whitelist IP: `0.0.0.0/0` (allow all)
+4. Whitelist Public Static IP of OCI VM
 5. Get connection details
 
-### 2. Configure MongoDB
+### 2. Add GitHub Secrets
 
-Edit `infra/mongodb.properties`:
-```properties
-MONGODB_USER=your_username
-MONGODB_CLUSTER=your_cluster.mongodb.net
-MONGODB_DATABASE=hermes_payments
-```
+Go to GitHub → Settings → Secrets → Actions and add:
 
-### 3. Add GitHub Secret
+**Required OCI Secrets:**
+- `OCI_USER_OCID`
+- `OCI_FINGERPRINT`
+- `OCI_TENANCY_OCID`
+- `OCI_REGION`
+- `OCI_PRIVATE_KEY`
+- `OCI_COMPARTMENT_ID`
+- `SSH_PUBLIC_KEY`
 
-- Go to GitHub → Settings → Secrets → Actions
-- Add secret: `MONGODB_PASSWORD` = your MongoDB password
+**Required MongoDB Secrets:**
+- `MONGODB_USER` (e.g., `admin`)
+- `MONGODB_PASSWORD` (your MongoDB password)
+- `MONGODB_CLUSTER` (e.g., `cluster0.abc123.mongodb.net`)
+- `MONGODB_DATABASE` (e.g., `hermes_payments`)
 
-### 4. Deploy
+### 3. Deploy
 
 ```bash
 git add .
@@ -125,17 +97,17 @@ git push
 GitHub Actions will automatically:
 1. Build Docker images
 2. Deploy infrastructure with Terraform
-3. Set up k3s cluster
-4. Deploy applications
+3. Install Docker on VM
+4. Deploy applications with Docker Compose
 
-**Deployment time**: ~10 minutes
+**Deployment time**: ~5 minutes
 
-### 5. Access Applications
+### 4. Access Applications
 
 After deployment completes:
 
-- **Payment Server**: `http://<VM_IP>:30092`
-- **Dashboard**: `http://<VM_IP>:30080`
+- **Payment Server**: `http://<VM_IP>:9292`
+- **Dashboard**: `http://<VM_IP>:8080`
 
 Get VM IP from GitHub Actions logs or Terraform output.
 
@@ -171,9 +143,9 @@ Dashboard runs on `http://localhost:8080`
 |-----------|--------|--------|
 | Node.js Server | 100MB | ✅ Running |
 | Micronaut Dashboard | 50MB | ✅ Running |
-| k3s Overhead | ~50MB | ✅ Running |
+| Docker Compose | ~50MB | ✅ Running |
 | **Total Used** | **~200MB** | |
-| **Free Memory** | **~800MB** | |
+| **Free Memory** | **~750MB** | |
 
 ### Why This Stack?
 
@@ -189,6 +161,12 @@ Dashboard runs on `http://localhost:8080`
 - Serverless (free tier)
 - Better horizontal scaling
 - Document model fits payment data
+
+**Docker Compose vs k3s:**
+- 80% less overhead (50MB vs 267MB)
+- Simpler deployment
+- Faster startup
+- Better for single-node setups
 
 **No Redis:**
 - MongoDB is fast enough for our scale
@@ -220,16 +198,15 @@ Dashboard runs on `http://localhost:8080`
 │   └── pom.xml
 │
 ├── infra/
-│   ├── k8s/                # Kubernetes manifests
-│   │   ├── payment-server-*.yaml
-│   │   └── payment-dashboard-*.yaml
 │   ├── scripts/
-│   │   └── setup-k3s.sh    # VM initialization
+│   │   └── setup-docker.sh # VM initialization
 │   ├── terraform/          # Infrastructure as Code
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
 │   └── mongodb.properties  # MongoDB configuration
+│
+├── docker-compose.yml      # Service orchestration
 │
 └── .github/workflows/
     └── deploy.yml          # CI/CD pipeline
@@ -237,12 +214,7 @@ Dashboard runs on `http://localhost:8080`
 
 ## Documentation
 
-- [Quick Start](QUICKSTART.md) - 15-minute setup guide
-- [Setup Instructions](SETUP_INSTRUCTIONS.md) - Detailed setup
-- [MongoDB Migration](MONGODB_MIGRATION.md) - MySQL → MongoDB guide
-- [Migration Guide](MIGRATION_GUIDE.md) - Spring Boot → Micronaut
-- [Deployment Checklist](DEPLOYMENT_CHECKLIST.md) - Pre/post deployment
-- [Summary](SUMMARY.md) - Architecture decisions
+- [CHANGELOG.md](CHANGELOG.md) - Development history and enhancements
 
 ## Key Features
 
@@ -262,7 +234,7 @@ Dashboard runs on `http://localhost:8080`
 ### DevOps
 - Automated CI/CD with GitHub Actions
 - Infrastructure as Code with Terraform
-- Container orchestration with k3s
+- Container orchestration with Docker Compose
 - Health checks and monitoring
 - Zero-downtime deployments
 
@@ -292,10 +264,10 @@ Dashboard runs on `http://localhost:8080`
 
 ```bash
 # Node.js Server
-curl http://<VM_IP>:30092/health
+curl http://<VM_IP>:9292/health
 
 # Micronaut Dashboard  
-curl http://<VM_IP>:30080/health
+curl http://<VM_IP>:8080/health
 ```
 
 ### Logs
@@ -304,12 +276,12 @@ curl http://<VM_IP>:30080/health
 # SSH to VM
 ssh -i ~/.ssh/id_rsa ubuntu@<VM_IP>
 
-# Check pods
-kubectl get pods -n hermes
+# Check containers
+docker ps
 
 # View logs
-kubectl logs -n hermes -l app=payment-server -f
-kubectl logs -n hermes -l app=payment-dashboard -f
+docker logs hermes-payment-server -f
+docker logs hermes-payment-dashboard -f
 ```
 
 ## Troubleshooting
@@ -317,8 +289,9 @@ kubectl logs -n hermes -l app=payment-dashboard -f
 ### Services not starting
 
 ```bash
-kubectl describe pods -n hermes
-kubectl logs -n hermes -l app=payment-server
+docker ps -a
+docker logs hermes-payment-server
+docker logs hermes-payment-dashboard
 ```
 
 ### MongoDB connection issues
@@ -331,7 +304,7 @@ Check:
 ### Out of memory
 
 ```bash
-kubectl top pods -n hermes
+docker stats
 free -h
 ```
 

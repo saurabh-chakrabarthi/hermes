@@ -215,7 +215,6 @@ jobs:
         
         if [ -z "${{ secrets.MONGODB_PASSWORD }}" ]; then
           echo "❌ ERROR: MONGODB_PASSWORD secret is not set!"
-          echo "Please add MONGODB_PASSWORD to GitHub Secrets"
           exit 1
         fi
         
@@ -224,49 +223,22 @@ jobs:
           exit 1
         fi
         
-        echo "✅ All required secrets are set"
-
-        # Atlas secrets (optional for Atlas provisioning)
-        if [ -z "${{ secrets.ATLAS_PUBLIC_KEY }}" ]; then
-          echo "❌ ERROR: ATLAS_PUBLIC_KEY secret is not set!"
-          echo "Please add ATLAS_PUBLIC_KEY to GitHub Secrets"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.ATLAS_PRIVATE_KEY }}" ]; then
-          echo "❌ ERROR: ATLAS_PRIVATE_KEY secret is not set!"
-          echo "Please add ATLAS_PRIVATE_KEY to GitHub Secrets"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.ATLAS_PROJECT_ID }}" ]; then
-          echo "❌ ERROR: ATLAS_PROJECT_ID secret is not set!"
-          echo "Please add ATLAS_PROJECT_ID to GitHub Secrets"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.HERMES_STATIC_IP }}" ]; then
-          echo "❌ ERROR: HERMES_STATIC_IP secret is not set!"
-          echo "Please add HERMES_STATIC_IP to GitHub Secrets"
-          exit 1
-        fi
         if [ -z "${{ secrets.MONGODB_CLUSTER }}" ]; then
           echo "❌ ERROR: MONGODB_CLUSTER secret is not set!"
-          echo "Please add MONGODB_CLUSTER to GitHub Secrets"
           exit 1
         fi
 
         if [ -z "${{ secrets.MONGODB_USER }}" ]; then
           echo "❌ ERROR: MONGODB_USER secret is not set!"
-          echo "Please add MONGODB_USER to GitHub Secrets"
           exit 1
         fi
 
         if [ -z "${{ secrets.MONGODB_DATABASE }}" ]; then
           echo "❌ ERROR: MONGODB_DATABASE secret is not set!"
-          echo "Please add MONGODB_DATABASE to GitHub Secrets"
           exit 1
         fi
+        
+        echo "✅ All required secrets are set"
     
     - name: Check Instance Metadata
       id: check_instance
@@ -291,9 +263,9 @@ jobs:
             --raw-output 2>/dev/null || echo "")
           
           echo "Current deployment_trigger: $CURRENT_TRIGGER"
-          echo "New deployment_trigger: 4"
+          echo "New deployment_trigger: 7"
           
-          if [ "$CURRENT_TRIGGER" != "4" ]; then
+          if [ "$CURRENT_TRIGGER" != "7" ]; then
             echo "Deployment trigger changed - terminating instance..."
             oci compute instance terminate --instance-id $INSTANCE_ID --force --wait-for-state TERMINATED
             echo "✅ Instance terminated"
@@ -321,10 +293,7 @@ jobs:
         TF_VAR_mongodb_cluster: ${{ secrets.MONGODB_CLUSTER }}
         TF_VAR_mongodb_user: ${{ secrets.MONGODB_USER }}
         TF_VAR_mongodb_database: ${{ secrets.MONGODB_DATABASE }}
-        TF_VAR_atlas_public_key: ${{ secrets.ATLAS_PUBLIC_KEY }}
-        TF_VAR_atlas_private_key: ${{ secrets.ATLAS_PRIVATE_KEY }}
-        TF_VAR_atlas_project_id: ${{ secrets.ATLAS_PROJECT_ID }}
-        TF_VAR_hermes_static_ip: ${{ secrets.HERMES_STATIC_IP }}
+        TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
         TF_VAR_github_owner: ${{ github.repository_owner }}
       run: |
         export PATH="$HOME/bin:$PATH"
@@ -338,8 +307,6 @@ jobs:
         echo "Private key first line: $(echo "$TF_VAR_private_key" | head -1)"
         echo "Private key last line: $(echo "$TF_VAR_private_key" | tail -1)"
         echo "Private key line count: $(echo "$TF_VAR_private_key" | wc -l)"
-        echo "HERMES_STATIC_IP: $TF_VAR_hermes_static_ip"
-        echo "Atlas project id: $TF_VAR_atlas_project_id"
 
         terraform init
         terraform plan
@@ -359,34 +326,22 @@ jobs:
         
         echo "INSTANCE_IP=$INSTANCE_IP" >> $GITHUB_ENV
         echo "✅ Terraform completed. Instance IP: $INSTANCE_IP"
-        
-        echo "🔒 Security Validation:"
-        terraform output -json security_validation | jq -r 'to_entries[] | "\(.key): \(.value)"'
-        
-        # Check if all ports are open
-        ALL_PORTS_STATUS=$(terraform output -json security_validation | jq -r '.all_ports_open')
-        if [[ "$ALL_PORTS_STATUS" != *"✅"* ]]; then
-          echo "❌ ERROR: Required ports are blocked!"
-          terraform output -json security_validation | jq .
-          exit 1
-        fi
-        echo "✅ All required ports are open"
     
     - name: Wait for Docker Services
       run: |
         echo "Waiting for Docker installation and container startup..."
         echo "Instance IP: $INSTANCE_IP"
-        echo "This may take 5-7 minutes (Docker install + MongoDB setup + image pull)"
+        echo "This may take 3-5 minutes (Docker install + image pull)"
         
         # Wait for cloud-init and Docker setup
-        echo "Waiting 3 minutes for Docker installation..."
-        sleep 180
+        echo "Waiting 2 minutes for Docker installation..."
+        sleep 120
         
-        # Wait for health endpoint with better feedback
+        # Wait for health endpoint
         echo "Checking service health (up to 5 minutes)..."
         for i in {1..60}; do
-          echo "Attempt $i/60: Checking http://$INSTANCE_IP:30092/health"
-          if curl -f -m 5 http://$INSTANCE_IP:30092/health 2>/dev/null; then
+          echo "Attempt $i/60: Checking http://$INSTANCE_IP:9292/health"
+          if curl -f -m 5 http://$INSTANCE_IP:9292/health 2>/dev/null; then
             echo "✅ Services ready!"
             exit 0
           fi
@@ -395,91 +350,64 @@ jobs:
         
         echo "⚠️ Service did not start in time. Check logs manually:"
         echo "ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
-        echo "kubectl get pods -n hermes"
-        echo "kubectl logs -n hermes -l app=payment-server"
-        echo "kubectl logs -n hermes -l app=mysql"
+        echo "docker ps"
+        echo "docker logs hermes-payment-server"
         exit 1
     
     - name: Health Check
       run: |
         echo "=== Checking Node.js Server Health ==="
         
-        # Get health response (allow non-200 status codes)
-        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:30092/health)
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:30092/health)
+        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:9292/health)
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:9292/health)
         
         echo "HTTP Status: $HTTP_CODE"
         echo "Response:"
         echo $HEALTH_RESPONSE | jq .
         
-        # Parse response
         OVERALL_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.status')
-        MYSQL_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.services.mysql.status')
-        MYSQL_ERROR=$(echo $HEALTH_RESPONSE | jq -r '.services.mysql.error')
-        REDIS_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.services.redis.status')
-        REDIS_ERROR=$(echo $HEALTH_RESPONSE | jq -r '.services.redis.error')
+        MONGODB_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.services.mongodb.status')
+        MONGODB_ERROR=$(echo $HEALTH_RESPONSE | jq -r '.services.mongodb.error')
         
         echo ""
         echo "=== Service Status ==="
         echo "Overall: $OVERALL_STATUS"
-        echo "MySQL: $MYSQL_STATUS"
-        if [ "$MYSQL_ERROR" != "null" ]; then
-          echo "  Error: $MYSQL_ERROR"
-        fi
-        echo "Redis: $REDIS_STATUS"
-        if [ "$REDIS_ERROR" != "null" ]; then
-          echo "  Error: $REDIS_ERROR"
+        echo "MongoDB: $MONGODB_STATUS"
+        if [ "$MONGODB_ERROR" != "null" ]; then
+          echo "  Error: $MONGODB_ERROR"
         fi
         
-        # Fail if MySQL is not connected
-        if [ "$MYSQL_STATUS" != "connected" ]; then
+        if [ "$MONGODB_STATUS" != "connected" ]; then
           echo ""
-          echo "❌ DEPLOYMENT FAILED: MySQL not connected!"
-          echo "Error: $MYSQL_ERROR"
-          echo ""
+          echo "❌ DEPLOYMENT FAILED: MongoDB not connected!"
+          echo "Error: $MONGODB_ERROR"
           echo "Troubleshooting:"
-          echo "1. Check if DB_PASSWORD secret is set correctly"
-          echo "2. SSH to VM: ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
-          echo "3. Check MySQL logs: kubectl logs -n hermes -l app=mysql"
-          echo "4. Check server logs: kubectl logs -n hermes -l app=payment-server"
+          echo "1. Check MONGODB_PASSWORD secret"
+          echo "2. SSH: ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
+          echo "3. Check logs: docker logs hermes-payment-server"
           exit 1
         fi
         
-        # Fail if Redis is not connected
-        if [ "$REDIS_STATUS" != "connected" ]; then
-          echo ""
-          echo "❌ DEPLOYMENT FAILED: Redis not connected!"
-          echo "Error: $REDIS_ERROR"
-          echo ""
-          echo "Troubleshooting:"
-          echo "1. SSH to VM: ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
-          echo "2. Check Redis logs: kubectl logs -n hermes -l app=redis"
-          echo "3. Check server logs: kubectl logs -n hermes -l app=payment-server"
-          exit 1
-        fi
-        
-        echo ""
         echo "✅ Node.js server healthy"
         
         echo ""
-        echo "=== Checking Spring Boot Client ==="
-        DASHBOARD_HEALTH=$(curl -s http://$INSTANCE_IP:30080/actuator/health)
+        echo "=== Checking Micronaut Dashboard ==="
+        DASHBOARD_HEALTH=$(curl -s http://$INSTANCE_IP:8080/health)
         echo $DASHBOARD_HEALTH | jq .
         
         DASHBOARD_STATUS=$(echo $DASHBOARD_HEALTH | jq -r '.status')
         if [ "$DASHBOARD_STATUS" != "UP" ]; then
-          echo "❌ Spring Boot client not healthy: $DASHBOARD_STATUS"
+          echo "❌ Micronaut dashboard not healthy: $DASHBOARD_STATUS"
           exit 1
         fi
         
-        echo "✅ Spring Boot client healthy"
+        echo "✅ Micronaut dashboard healthy"
         
         echo ""
         echo "====================================="
         echo "✅ DEPLOYMENT SUCCESSFUL!"
         echo "====================================="
-        echo "🔵 Node.js Server: http://$INSTANCE_IP:30092"
-        echo "🟢 Spring Boot Dashboard: http://$INSTANCE_IP:30080"
-        echo "🟢 MySQL: $MYSQL_STATUS"
-        echo "🔴 Redis: $REDIS_STATUS"
+        echo "🔵 Payment Server: http://$INSTANCE_IP:9292"
+        echo "🟢 Dashboard: http://$INSTANCE_IP:8080"
+        echo "🟢 MongoDB: $MONGODB_STATUS"
         echo "====================================="

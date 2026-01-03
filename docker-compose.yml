@@ -1,79 +1,44 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-      - MYSQL_DATABASE=hermes_payments
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./server/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   payment-server:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/hermes-payment-server:latest
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     container_name: payment-server
     ports:
       - "9292:9292"
     environment:
       - PORT=9292
       - NODE_ENV=production
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=hermes_payments
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - MONGODB_USER=${MONGODB_USER}
+      - MONGODB_PASSWORD=${MONGODB_PASSWORD}
+      - MONGODB_CLUSTER=${MONGODB_CLUSTER}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9292/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9292/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   payment-dashboard:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/hermes-payment-dashboard:latest
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
     container_name: payment-dashboard
     ports:
       - "8080:8080"
     environment:
       - PAYMENT_SERVER_URL=http://payment-server:9292
     depends_on:
-      - payment-server
+      payment-server:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-volumes:
-  mysql_data:
-  redis_data:
+      start_period: 60s

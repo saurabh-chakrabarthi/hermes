@@ -44,12 +44,18 @@ variable "tenancy_ocid" {
 variable "deployment_trigger" {
   description = "Trigger to force instance replacement"
   type        = string
-  default     = "6"
+  default     = "7"
 }
 
 variable "github_owner" {
   description = "GitHub repository owner for container registry"
   type        = string
+}
+
+variable "github_token" {
+  description = "GitHub token for container registry"
+  type        = string
+  sensitive   = true
 }
 
 variable "mongodb_user" {
