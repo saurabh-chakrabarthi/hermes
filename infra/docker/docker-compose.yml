@@ -3,7 +3,7 @@ version: '3.8'
 services:
   payment-server:
     build:
-      context: ./server
+      context: ../../server
       dockerfile: Dockerfile
     container_name: payment-server
     ports:
@@ -25,7 +25,7 @@ services:
 
   payment-dashboard:
     build:
-      context: ./dashboard
+      context: ../../dashboard
       dockerfile: Dockerfile
     container_name: payment-dashboard
     ports:

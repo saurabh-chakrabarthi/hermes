@@ -4,13 +4,17 @@
 
 1. **OCI Account** with Always Free Tier
 2. **GitHub Account**
-3. **OCI HeatWave MySQL** database created
+3. **MongoDB Atlas** account (free tier)
 
 ## Quick Start
 
-### 1. Create OCI HeatWave MySQL
+### 1. Create MongoDB Atlas Cluster
 
-Follow [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) Step 1 to create the database.
+1. Go to https://www.mongodb.com/cloud/atlas/register
+2. Create free M0 cluster
+3. Create database user and password
+4. Whitelist IP: `0.0.0.0/0` (or your VM's public IP)
+5. Get connection details (cluster URL)
 
 ### 2. Configure GitHub Secrets
 
@@ -25,8 +29,10 @@ Add these secrets in your GitHub repository (Settings → Secrets and variables 
 | `OCI_PRIVATE_KEY` | API private key (full PEM) | `-----BEGIN PRIVATE KEY-----...` |
 | `OCI_COMPARTMENT_ID` | Compartment OCID | `ocid1.compartment.oc1..aaa...` |
 | `SSH_PUBLIC_KEY` | SSH public key for VM | `ssh-rsa AAAA...` |
-| `DB_PASSWORD` | MySQL password | `YourSecurePassword123!` |
-| `MYSQL_HOST` | OCI MySQL endpoint | `10.0.0.50` or public IP |
+| `MONGODB_USER` | MongoDB username | `admin` |
+| `MONGODB_PASSWORD` | MongoDB password | `YourSecurePassword123!` |
+| `MONGODB_CLUSTER` | MongoDB cluster URL | `cluster0.abc123.mongodb.net` |
+| `MONGODB_DATABASE` | Database name | `hermes_payments` |
 
 ### 3. Deploy
 
@@ -40,43 +46,43 @@ GitHub Actions will automatically:
 1. Run tests
 2. Build Docker images
 3. Deploy infrastructure with Terraform
-4. Set up k3s with Redis
-5. Deploy applications
+4. Install Docker on VM
+5. Deploy applications with Docker Compose
 
 ### 4. Access Applications
 
 After ~10 minutes:
 
-- **Payment Server**: `http://<VM_IP>:30092`
-- **Dashboard**: `http://<VM_IP>:30080`
+- **Payment Server**: `http://<VM_IP>:9292`
+- **Dashboard**: `http://<VM_IP>:8080`
 
 ## Architecture
 
 ```
-┌─────────────────────────────────┐
-│   OCI HeatWave MySQL (Free)     │
-│   - 50GB Storage                │
-│   - Always Free Tier            │
-└────────────┬────────────────────┘
+┌──────────────────────────────────┐
+│   MongoDB Atlas (Free Tier)      │
+│   - 512MB Storage                │
+│   - Serverless, Managed          │
+└────────────┬─────────────────────┘
              │
-┌────────────▼────────────────────┐
-│   OCI VM (1GB RAM, Free)        │
-│   ┌─────────────────────────┐   │
-│   │   k3s Kubernetes        │   │
-│   │   ├── Redis (20MB)      │   │
-│   │   ├── Node.js (100MB)   │   │
-│   │   └── Micronaut (50MB)  │   │
-│   └─────────────────────────┘   │
-└─────────────────────────────────┘
+┌────────────▼─────────────────────┐
+│   OCI VM (1GB RAM, Free Tier)    │
+│   ┌──────────────────────────┐   │
+│   │   Docker Compose         │   │
+│   │   ├── Node.js (100MB)    │   │
+│   │   └── Micronaut (50MB)   │   │
+│   └──────────────────────────┘   │
+│   Ports: 9292, 8080              │
+│   Memory Usage: ~200MB           │
+└──────────────────────────────────┘
 ```
 
 ## Tech Stack
 
 - **Backend**: Node.js + Express
 - **Frontend**: Micronaut + Thymeleaf
-- **Database**: OCI HeatWave MySQL
-- **Cache**: Redis
-- **Orchestration**: k3s (lightweight Kubernetes)
+- **Database**: MongoDB Atlas (NoSQL, serverless)
+- **Orchestration**: Docker Compose
 - **Infrastructure**: Terraform
 - **CI/CD**: GitHub Actions
 - **Registry**: GitHub Container Registry
@@ -89,7 +95,7 @@ After ~10 minutes:
 cd server
 npm install
 cp .env.example .env
-# Edit .env with your MySQL credentials
+# Edit .env with your MongoDB credentials
 npm run dev
 ```
 
@@ -107,21 +113,22 @@ mvn mn:run
 
 ```bash
 ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@<VM_IP>
-kubectl get pods -n hermes
-kubectl logs -n hermes -l app=payment-server
+docker ps
+docker logs hermes-payment-server
 ```
 
-### MySQL connection issues
+### MongoDB connection issues
 
-Check security list allows traffic from VM to MySQL:
-- OCI Console → Networking → VCN → Security Lists
-- Ensure port 3306 is open from VM subnet
+Check:
+1. `MONGODB_PASSWORD` secret is set correctly
+2. MongoDB Atlas IP whitelist includes `0.0.0.0/0`
+3. Database user has read/write permissions
 
 ### Out of memory
 
 Check resource usage:
 ```bash
-kubectl top pods -n hermes
+docker stats
 free -h
 ```
 
@@ -131,20 +138,18 @@ free -h
 
 ```bash
 # Node.js Server
-curl http://<VM_IP>:30092/health
+curl http://<VM_IP>:9292/health
 
 # Micronaut Dashboard
-curl http://<VM_IP>:30080/health
+curl http://<VM_IP>:8080/health
 ```
 
 ### Logs
 
 ```bash
-# All pods
-kubectl logs -n hermes --all-containers=true -f
-
-# Specific app
-kubectl logs -n hermes -l app=payment-server -f
+# View logs
+docker logs hermes-payment-server -f
+docker logs hermes-payment-dashboard -f
 ```
 
 ## Cost
@@ -152,15 +157,13 @@ kubectl logs -n hermes -l app=payment-server -f
 **Total Monthly Cost: $0**
 
 - OCI VM: Always Free (1 OCPU, 1GB RAM)
-- OCI MySQL: Always Free (50GB)
-- Redis: On VM (free)
+- MongoDB Atlas: M0 Free (512MB)
 - GitHub Actions: Free tier (2000 minutes/month)
 - Container Registry: Free (500MB)
 
 ## Support
 
 For issues, check:
-1. [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
-2. GitHub Actions logs
-3. Kubernetes pod logs
-4. OCI cloud-init logs: `/var/log/cloud-init-output.log`
+1. GitHub Actions logs
+2. Docker container logs
+3. OCI cloud-init logs: `/var/log/cloud-init-output.log`

@@ -2,7 +2,7 @@
 
 ## Before Deployment
 
-### ✅ MongoDB (Atlas) Setup
+### ✅ MongoDB Atlas Setup
 
 - [ ] MongoDB Atlas cluster created (or managed MongoDB hosted)
 - [ ] VPC / network access configured so the deployment VM can connect (allowlist IPs)
@@ -28,17 +28,18 @@ All secrets added in GitHub repository settings:
 - [ ] `OCI_PRIVATE_KEY`
 - [ ] `OCI_COMPARTMENT_ID`
 - [ ] `SSH_PUBLIC_KEY`
-- [ ] `DB_PASSWORD`
-- [ ] `MYSQL_HOST` ⭐ NEW - OCI MySQL endpoint
+- [ ] `MONGODB_USER`
+- [ ] `MONGODB_PASSWORD`
+- [ ] `MONGODB_CLUSTER`
+- [ ] `MONGODB_DATABASE`
 
 ### ✅ Code Changes
 
-- [ ] Micronaut dashboard created in `dashboard/` directory
-- [ ] `infra/k8s/payment-server-configmap.yaml` updated with `MYSQL_HOST_PLACEHOLDER`
-- [ ] `infra/scripts/setup-k3s.sh` updated to remove MySQL deployment
-- [ ] `infra/terraform/variables.tf` has `mysql_host` variable
-- [ ] `.github/workflows/deploy.yml` builds Micronaut image
-- [ ] `deployment_trigger` = `5` in `variables.tf`
+- [ ] Docker Compose configuration in `docker-compose.yml`
+- [ ] `infra/scripts/setup-docker.sh` updated for Docker deployment
+- [ ] `infra/terraform/main.tf` uses Docker setup script
+- [ ] `.github/workflows/deploy.yml` updated for Docker Compose
+- [ ] `deployment_trigger` updated in `variables.tf` if needed
 
 ## Deployment Steps
 
@@ -46,7 +47,7 @@ All secrets added in GitHub repository settings:
 
 ```bash
 git add .
-git commit -m "Migrate to Micronaut + OCI HeatWave MySQL"
+git commit -m "Deploy Hermes Payment Portal"
 git push
 ```
 
@@ -67,8 +68,8 @@ Expected timeline: ~10-12 minutes
 - [ ] Terraform creates/updates infrastructure (2-3 min)
 - [ ] Instance terminates old VM (if exists)
 - [ ] New instance provisions (3-4 min)
-- [ ] k3s installs (1-2 min)
-- [ ] Pods start (2-3 min)
+- [ ] Docker installs (1-2 min)
+- [ ] Containers start (2-3 min)
 
 ### 4. Check Services
 
@@ -77,89 +78,89 @@ Expected timeline: ~10-12 minutes
 VM_IP=<your-vm-ip>
 
 # Check Node.js health
-curl http://$VM_IP:30092/health
+curl http://$VM_IP:9292/health
 
 # Check Micronaut health
-curl http://$VM_IP:30080/health
+curl http://$VM_IP:8080/health
 
 # Access dashboard
-open http://$VM_IP:30080
+open http://$VM_IP:8080
 ```
 
 ## Post-Deployment Verification
 
-### ✅ Kubernetes Pods
+### ✅ Docker Containers
 
 ```bash
 ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$VM_IP
-kubectl get pods -n hermes
+docker ps
 ```
 
 Expected output:
 ```
-NAME                                 READY   STATUS    RESTARTS   AGE
-redis-xxx                            1/1     Running   0          5m
-payment-server-xxx                   1/1     Running   0          4m
-payment-dashboard-xxx                1/1     Running   0          4m
+CONTAINER ID   IMAGE                                    STATUS
+xxx            hermes-payment-server:latest             Up 5 minutes (healthy)
+xxx            hermes-payment-dashboard-micronaut:latest Up 4 minutes (healthy)
 ```
 
 ### ✅ Memory Usage
 
 ```bash
-kubectl top pods -n hermes
+docker stats
 free -h
 ```
 
-Expected: <500MB total usage (plenty of headroom on 1GB VM)
+Expected: <300MB total usage (700MB free)
 
 ### ✅ Database Connection
 
 ```bash
-# Check server logs for MySQL connection
-kubectl logs -n hermes -l app=payment-server | grep -i mysql
+# Check server logs for MongoDB connection
+docker logs hermes-payment-server | grep -i mongo
 ```
 
-Should see: "MySQL connected" or similar success message
+Should see: "MongoDB connected" or similar success message
 
 ### ✅ Application Functionality
 
-- [ ] Dashboard loads at `http://$VM_IP:30080`
+- [ ] Dashboard loads at `http://$VM_IP:8080`
 - [ ] Can submit payment form
 - [ ] Payments appear in dashboard
-- [ ] Data persists in OCI MySQL
+- [ ] Data persists in MongoDB Atlas
 
 ## Troubleshooting
 
-### Issue: Pods not starting
+### Issue: Containers not starting
 
 ```bash
-kubectl describe pods -n hermes
-kubectl logs -n hermes -l app=payment-server
+docker ps -a
+docker logs hermes-payment-server
+docker logs hermes-payment-dashboard
 ```
 
 Common causes:
-- MySQL host incorrect
-- DB_PASSWORD mismatch
+- MongoDB connection string incorrect
+- MONGODB_PASSWORD mismatch
 - Image pull errors
 
-### Issue: MySQL connection failed
+### Issue: MongoDB connection failed
 
 Check:
-1. `MYSQL_HOST` secret is correct
-2. Security list allows traffic from VM to MySQL (port 3306)
-3. MySQL is in ACTIVE state
-4. Database `hermes_payments` exists
+1. `MONGODB_PASSWORD` secret is correct
+2. MongoDB Atlas IP whitelist includes `0.0.0.0/0` or VM's public IP
+3. MongoDB cluster is active
+4. Database user has read/write permissions
 
 ### Issue: Out of memory
 
 ```bash
-kubectl top pods -n hermes
+docker stats
 free -h
 ```
 
 If still OOM:
-- Reduce Redis memory limit
 - Check for memory leaks in logs
+- Restart containers: `docker compose restart`
 
 ## Rollback Plan
 
@@ -172,30 +173,30 @@ git push
 
 # Option 2: Manual fix on VM
 ssh ubuntu@$VM_IP
-kubectl delete -f /home/ubuntu/k8s/
-# Fix manifests
-kubectl apply -f /home/ubuntu/k8s/
+cd /home/ubuntu/app
+docker compose down
+# Fix configuration
+docker compose up -d
 ```
 
 ## Success Criteria
 
-✅ All pods running  
+✅ All containers running  
 ✅ Health endpoints return 200  
 ✅ Dashboard accessible  
 ✅ Can create payments  
-✅ Data persists in MySQL  
-✅ Memory usage <500MB  
-✅ No pod restarts
+✅ Data persists in MongoDB  
+✅ Memory usage <300MB  
+✅ No container restarts
 
 ## Next Steps
 
 After successful deployment:
 
 1. Test payment submission
-2. Verify data in MySQL
+2. Verify data in MongoDB Atlas
 3. Monitor for 24 hours
 4. Update documentation
-5. Remove old `client/` directory (Spring Boot)
 
 ## Notes
 

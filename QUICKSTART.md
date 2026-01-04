@@ -5,46 +5,22 @@ Get Hermes Payment Portal running in 15 minutes!
 ## Prerequisites
 
 - OCI Account (free tier)
+- MongoDB Atlas Account (free tier)
 - GitHub Account
 - 15 minutes of your time
 
-## Step 1: Create OCI MySQL (5 minutes)
+## Step 1: Create MongoDB Atlas Cluster (5 minutes)
 
-1. Login to OCI Console
-2. Go to **Databases** → **MySQL HeatWave** → **DB Systems**
-3. Click **Create MySQL DB System**
-4. Fill in:
-   - Name: `hermes-mysql`
-   - Shape: **MySQL.Free** (Always Free)
-   - Username: `admin`
-   - Password: Create a strong password
-   - VCN: `hermes-payment-portal-vcn` (will be created by Terraform)
-   - Enable public endpoint
-5. Click **Create** and wait ~10 minutes
-6. Copy the **endpoint IP** when ready
+1. Go to https://www.mongodb.com/cloud/atlas/register
+2. Create free M0 cluster
+3. Create database user and password
+4. Whitelist IP: `0.0.0.0/0` (allows all IPs)
+5. Get connection details:
+   - Cluster URL (e.g., `cluster0.abc123.mongodb.net`)
+   - Database name (e.g., `hermes_payments`)
+6. Database will be auto-created on first connection
 
-## Step 2: Initialize Database (2 minutes)
-
-```bash
-# Connect to MySQL
-mysql -h <YOUR_MYSQL_IP> -u admin -p
-
-# Run these commands
-CREATE DATABASE hermes_payments;
-USE hermes_payments;
-
-# Copy and paste the schema from server/db/schema.sql
-# Or run: SOURCE /path/to/server/db/schema.sql;
-
-# Verify
-SHOW TABLES;
-# Should see: payments, validation_results, audit_log
-
-# Exit
-exit;
-```
-
-## Step 3: Configure GitHub (5 minutes)
+## Step 2: Configure GitHub (5 minutes)
 
 ### Fork/Clone Repository
 
@@ -57,7 +33,7 @@ cd hermes
 
 Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
-Add these 9 secrets:
+Add these secrets:
 
 | Secret | Where to find it |
 |--------|------------------|
@@ -68,10 +44,12 @@ Add these 9 secrets:
 | `OCI_PRIVATE_KEY` | Your API private key (full PEM content) |
 | `OCI_COMPARTMENT_ID` | OCI Console → Identity → Compartments |
 | `SSH_PUBLIC_KEY` | Your SSH public key (`cat ~/.ssh/id_rsa.pub`) |
-| `DB_PASSWORD` | The MySQL password you created |
-| `MYSQL_HOST` | The MySQL endpoint IP from Step 1 |
+| `MONGODB_USER` | MongoDB Atlas username |
+| `MONGODB_PASSWORD` | MongoDB Atlas password |
+| `MONGODB_CLUSTER` | MongoDB cluster URL (e.g., `cluster0.abc123.mongodb.net`) |
+| `MONGODB_DATABASE` | Database name (e.g., `hermes_payments`) |
 
-## Step 4: Deploy (3 minutes)
+## Step 3: Deploy (3 minutes)
 
 ```bash
 # Commit and push
@@ -87,18 +65,18 @@ git push
 3. Wait ~10-12 minutes for completion
 4. Get the VM IP from the logs (look for "Instance IP: X.X.X.X")
 
-## Step 5: Verify (1 minute)
+## Step 4: Verify (1 minute)
 
 ```bash
 # Replace with your VM IP
 VM_IP=<your-vm-ip>
 
 # Test health endpoints
-curl http://$VM_IP:30092/health
-curl http://$VM_IP:30080/health
+curl http://$VM_IP:9292/health
+curl http://$VM_IP:8080/health
 
 # Open dashboard in browser
-open http://$VM_IP:30080
+open http://$VM_IP:8080
 ```
 
 ## Success! 🎉
@@ -111,20 +89,19 @@ You should see:
 
 ## Troubleshooting
 
-### MySQL connection failed
+### MongoDB connection failed
 
 ```bash
-# Check security list allows traffic
-# OCI Console → Networking → VCN → Security Lists
-# Ensure port 3306 is open from VM subnet to MySQL
+# Check MongoDB Atlas IP whitelist includes 0.0.0.0/0
+# Or add your VM's specific public IP
 ```
 
-### Pods not starting
+### Services not starting
 
 ```bash
 ssh -i ~/.ssh/id_rsa ubuntu@$VM_IP
-kubectl get pods -n hermes
-kubectl logs -n hermes -l app=payment-server
+docker ps
+docker logs hermes-payment-server
 ```
 
 ### Still stuck?
@@ -132,20 +109,18 @@ kubectl logs -n hermes -l app=payment-server
 Check these docs:
 - [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md) - Detailed setup
 - [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Step-by-step verification
-- [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Architecture details
 
 ## What's Running?
 
 After deployment:
 
 ```
-OCI HeatWave MySQL (Free)
+MongoDB Atlas (Free)
     ↓
 OCI VM (Free)
-├── k3s
-├── Redis (cache)
-├── Node.js Server (port 30092)
-└── Micronaut Dashboard (port 30080)
+├── Docker Compose
+├── Node.js Server (port 9292)
+└── Micronaut Dashboard (port 8080)
 ```
 
 **Total Cost: $0/month** 💰
@@ -153,14 +128,13 @@ OCI VM (Free)
 ## Next Steps
 
 1. Test payment submission
-2. Check data in MySQL
+2. Check data in MongoDB Atlas
 3. Explore the dashboard
-4. Read [SUMMARY.md](SUMMARY.md) to understand the architecture
+4. Read [README.md](README.md) to understand the architecture
 
 ## Need Help?
 
 - **Setup issues**: [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)
 - **Deployment issues**: [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
-- **Architecture questions**: [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
 
 Happy coding! 🚀

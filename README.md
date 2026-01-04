@@ -86,6 +86,12 @@ Go to GitHub → Settings → Secrets → Actions and add:
 - `MONGODB_CLUSTER` (e.g., `cluster0.abc123.mongodb.net`)
 - `MONGODB_DATABASE` (e.g., `hermes_payments`)
 
+**Security Secrets (Recommended):**
+- `ALLOWED_SSH_CIDR` (e.g., `<your_ip_range>` - your IP range for SSH access)
+- `ALLOWED_WEB_CIDR` (e.g., `<your_ip_range>` - your IP range for web access)
+
+**Note:** If security secrets are not set, defaults to `0.0.0.0/0` (insecure - allows all IPs)
+
 ### 3. Deploy
 
 ```bash
@@ -183,6 +189,7 @@ Dashboard runs on `http://localhost:8080`
 │   │   └── connection.js   # MongoDB connection
 │   ├── public/             # Static HTML forms
 │   ├── server.js           # Express server
+│   ├── Dockerfile          # Server container
 │   └── package.json
 │
 ├── dashboard/              # Micronaut dashboard
@@ -195,18 +202,23 @@ Dashboard runs on `http://localhost:8080`
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── templates/
+│   ├── Dockerfile          # Dashboard container
 │   └── pom.xml
 │
 ├── infra/
+│   ├── docker/             # Container orchestration
+│   │   ├── docker-compose.yml      # Production setup
+│   │   ├── docker-compose.dev.yml  # Development setup
+│   │   └── README.md
 │   ├── scripts/
 │   │   └── setup-docker.sh # VM initialization
 │   ├── terraform/          # Infrastructure as Code
 │   │   ├── main.tf
+│   │   ├── security.tf     # Network security rules
 │   │   ├── variables.tf
-│   │   └── outputs.tf
+│   │   ├── outputs.tf
+│   │   └── SECURITY.md     # Security documentation
 │   └── mongodb.properties  # MongoDB configuration
-│
-├── docker-compose.yml      # Service orchestration
 │
 └── .github/workflows/
     └── deploy.yml          # CI/CD pipeline
@@ -313,9 +325,22 @@ free -h
 - ✅ Secrets stored in GitHub Secrets (encrypted)
 - ✅ MongoDB password not in code
 - ✅ HTTPS for MongoDB connection (TLS)
-- ✅ OCI security lists configured
+- ✅ **Network security with IP restrictions**
+- ✅ **SSH access limited to specific CIDR blocks**
+- ✅ **Web access restricted to allowed IP ranges**
+- ✅ **Minimal egress rules (no "allow all" outbound)**
 - ✅ No hardcoded credentials
 - ✅ Environment-based configuration
+
+### Security Configuration
+
+The infrastructure now uses **restricted network access** instead of allowing all traffic (`0.0.0.0/0`):
+
+- **SSH Access**: Configurable via `allowed_ssh_cidr` variable
+- **Web Access**: Configurable via `allowed_web_cidr` variable  
+- **Egress Rules**: Only specific ports (443, 80, 53, 27017) allowed
+
+See [infra/terraform/SECURITY.md](infra/terraform/SECURITY.md) for detailed security configuration.
 
 ## Contributing
 

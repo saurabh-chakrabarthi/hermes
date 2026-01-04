@@ -12,7 +12,7 @@ env:
   TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
   TF_VAR_mongodb_password: ${{ secrets.MONGODB_PASSWORD }}
   TF_VAR_mongodb_user: hermes_db_user
-  TF_VAR_mongodb_cluster: hermescluster.mf0xovo.mongodb.net
+  TF_VAR_mongodb_cluster: <mongodb_cluster_hostname>
   TF_VAR_mongodb_database: hermes_payments
   TF_VAR_github_owner: ${{ github.repository_owner }}
   TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -99,5 +99,18 @@ variable "hermes_static_ip" {
   default     = ""
 }
 
+# Security variables for network access control
+variable "allowed_ssh_cidr" {
+  description = "CIDR block allowed for SSH access (e.g., your office IP range)"
+  type        = string
+  default     = "0.0.0.0/0"  # Change this to your specific IP range
+}
+
+variable "allowed_web_cidr" {
+  description = "CIDR block allowed for web access to dashboard and API"
+  type        = string
+  default     = "0.0.0.0/0"  # Change this to your specific IP range or customer IP ranges
+}
+
 
 

@@ -1,13 +1,13 @@
-# Update existing default security list to allow NodePort access
+# Security list with restricted access
 resource "oci_core_default_security_list" "hermes_default_security_list" {
   manage_default_resource_id = data.oci_core_subnets.existing_subnet.subnets[0].security_list_ids[0]
 
-  # Allow SSH
+  # SSH access - restrict to your IP range
   ingress_security_rules {
     protocol    = "6"
-    source      = "0.0.0.0/0"
+    source      = var.allowed_ssh_cidr
     stateless   = false
-    description = "SSH access"
+    description = "SSH access from allowed IPs"
     
     tcp_options {
       min = 22
@@ -15,37 +15,81 @@ resource "oci_core_default_security_list" "hermes_default_security_list" {
     }
   }
 
-  # Allow NodePort 30080 (Dashboard)
+  # Dashboard access - restrict to specific IPs/ranges
   ingress_security_rules {
     protocol    = "6"
-    source      = "0.0.0.0/0"
+    source      = var.allowed_web_cidr
     stateless   = false
-    description = "Dashboard NodePort"
+    description = "Dashboard access from allowed IPs"
     
     tcp_options {
-      min = 30080
-      max = 30080
+      min = 8080
+      max = 8080
     }
   }
 
-  # Allow NodePort 30092 (Server)
+  # Payment server access - restrict to specific IPs/ranges
   ingress_security_rules {
     protocol    = "6"
-    source      = "0.0.0.0/0"
+    source      = var.allowed_web_cidr
     stateless   = false
-    description = "Server NodePort"
+    description = "Payment server access from allowed IPs"
     
     tcp_options {
-      min = 30092
-      max = 30092
+      min = 9292
+      max = 9292
     }
   }
 
-  # Allow all egress
+  # HTTPS outbound (for MongoDB Atlas, package updates)
   egress_security_rules {
-    protocol    = "all"
+    protocol    = "6"
     destination = "0.0.0.0/0"
     stateless   = false
-    description = "Allow all outbound"
+    description = "HTTPS outbound"
+    
+    tcp_options {
+      min = 443
+      max = 443
+    }
+  }
+
+  # HTTP outbound (for package updates)
+  egress_security_rules {
+    protocol    = "6"
+    destination = "0.0.0.0/0"
+    stateless   = false
+    description = "HTTP outbound"
+    
+    tcp_options {
+      min = 80
+      max = 80
+    }
+  }
+
+  # DNS outbound
+  egress_security_rules {
+    protocol    = "17"
+    destination = "0.0.0.0/0"
+    stateless   = false
+    description = "DNS outbound"
+    
+    udp_options {
+      min = 53
+      max = 53
+    }
+  }
+
+  # MongoDB Atlas (port 27017)
+  egress_security_rules {
+    protocol    = "6"
+    destination = "0.0.0.0/0"
+    stateless   = false
+    description = "MongoDB Atlas access"
+    
+    tcp_options {
+      min = 27017
+      max = 27017
+    }
   }
 }

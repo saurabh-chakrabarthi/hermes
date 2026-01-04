@@ -295,6 +295,8 @@ jobs:
         TF_VAR_mongodb_database: ${{ secrets.MONGODB_DATABASE }}
         TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
         TF_VAR_github_owner: ${{ github.repository_owner }}
+        TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR || '0.0.0.0/0' }}
+        TF_VAR_allowed_web_cidr: ${{ secrets.ALLOWED_WEB_CIDR || '0.0.0.0/0' }}
       run: |
         export PATH="$HOME/bin:$PATH"
 

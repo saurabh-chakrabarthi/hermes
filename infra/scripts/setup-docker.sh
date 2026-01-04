@@ -40,10 +40,10 @@ netfilter-persistent save
 mkdir -p /home/ubuntu/app
 cd /home/ubuntu/app
 
-# Download docker-compose.yml
+# Download docker-compose.yml from new location
 echo "Downloading application files..."
 REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/hermes/main"
-curl -fsSL "$REPO_URL/docker-compose.yml" -o docker-compose.yml
+curl -fsSL "$REPO_URL/infra/docker/docker-compose.yml" -o docker-compose.yml
 
 # Download MongoDB properties
 curl -fsSL "$REPO_URL/infra/mongodb.properties" -o mongodb.properties

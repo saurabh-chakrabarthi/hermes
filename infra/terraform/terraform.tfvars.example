@@ -4,3 +4,15 @@
 # ssh_public_key = "your-ssh-public-key"
 # availability_domain = "your-availability-domain"
 # source_id = "your-image-ocid"
+
+# Security Configuration - REQUIRED for production
+# Get your current IP: curl ifconfig.me
+# Replace <your_ip> with your actual IP address
+
+# Option 1: Exact IP (most secure, may break if router reboots)
+allowed_ssh_cidr = "<your_ip>/32"   # Your current public IP for SSH
+allowed_web_cidr = "<your_ip>/32"   # Your current public IP for web access
+
+# Option 2: ISP range (recommended - handles IP changes)
+# allowed_ssh_cidr = "<your_isp_range>/16"    # Your ISP's IP range
+# allowed_web_cidr = "<your_isp_range>/16"    # Your ISP's IP range

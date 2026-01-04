@@ -1,7 +1,11 @@
+version: '3.8'
 
 services:
   payment-client:
-    build: .
+    build:
+      context: ../../client
+      dockerfile: Dockerfile
+    container_name: payment-client
     ports:
       - "8080:8080"
     environment:
@@ -12,7 +16,10 @@ services:
       - payment-network
 
   booking-portal:
-    build: ../server
+    build:
+      context: ../../server
+      dockerfile: Dockerfile
+    container_name: booking-portal
     ports:
       - "9292:9292"
     networks:
