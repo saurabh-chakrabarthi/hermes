@@ -218,7 +218,6 @@ Dashboard runs on `http://localhost:8080`
 │   │   ├── variables.tf
 │   │   ├── outputs.tf
 │   │   └── SECURITY.md     # Security documentation
-│   └── mongodb.properties  # MongoDB configuration
 │
 └── .github/workflows/
     └── deploy.yml          # CI/CD pipeline

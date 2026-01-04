@@ -45,9 +45,6 @@ echo "Downloading application files..."
 REPO_URL="https://raw.githubusercontent.com/${GITHUB_OWNER}/hermes/main"
 curl -fsSL "$REPO_URL/infra/docker/docker-compose.yml" -o docker-compose.yml
 
-# Download MongoDB properties
-curl -fsSL "$REPO_URL/infra/mongodb.properties" -o mongodb.properties
-
 # Create .env file from environment variables (passed by Terraform)
 cat > .env << EOF
 MONGODB_USER=${MONGODB_USER}
