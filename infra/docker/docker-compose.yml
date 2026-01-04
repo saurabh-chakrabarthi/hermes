@@ -2,10 +2,8 @@ version: '3.8'
 
 services:
   payment-server:
-    build:
-      context: ../../server
-      dockerfile: Dockerfile
-    container_name: payment-server
+    image: ghcr.io/${GITHUB_OWNER:-saurabh-chakrabarthi}/hermes-payment-server:latest
+    container_name: hermes-payment-server
     ports:
       - "9292:9292"
     environment:
@@ -24,10 +22,8 @@ services:
       start_period: 40s
 
   payment-dashboard:
-    build:
-      context: ../../dashboard
-      dockerfile: Dockerfile
-    container_name: payment-dashboard
+    image: ghcr.io/${GITHUB_OWNER:-saurabh-chakrabarthi}/hermes-payment-dashboard-micronaut:latest
+    container_name: hermes-payment-dashboard
     ports:
       - "8080:8080"
     environment:

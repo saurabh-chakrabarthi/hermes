@@ -48,8 +48,7 @@ curl -fsSL "$REPO_URL/infra/docker/docker-compose.yml" -o docker-compose.yml
 # Download MongoDB properties
 curl -fsSL "$REPO_URL/infra/mongodb.properties" -o mongodb.properties
 
-# Load MongoDB properties and create .env file
-source mongodb.properties
+# Create .env file from environment variables (passed by Terraform)
 cat > .env << EOF
 MONGODB_USER=${MONGODB_USER}
 MONGODB_PASSWORD=${MONGODB_PASSWORD}
@@ -64,12 +63,7 @@ chown -R ubuntu:ubuntu /home/ubuntu/app
 echo "Logging in to GitHub Container Registry..."
 echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
 
-# Pull images
-echo "Pulling Docker images..."
-docker pull ghcr.io/${GITHUB_OWNER}/hermes-payment-server:latest
-docker pull ghcr.io/${GITHUB_OWNER}/hermes-payment-dashboard-micronaut:latest
-
-# Start services
+# Start services (will pull images automatically)
 echo "Starting services..."
 cd /home/ubuntu/app
 docker compose up -d
