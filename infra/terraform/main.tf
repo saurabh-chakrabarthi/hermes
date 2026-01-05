@@ -77,17 +77,18 @@ data "oci_core_subnets" "existing_subnet" {
   vcn_id         = data.oci_core_vcns.existing_vcn.virtual_networks[0].id
 }
 
-# Create instance only if none exists
+# Create instance with deployment trigger for replacement
 resource "oci_core_instance" "hermes_instance" {
-  count = local.should_create_instance ? 1 : 0
-  
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   compartment_id      = var.compartment_id
   display_name        = "hermes-payment-portal"
   shape               = "VM.Standard.E2.1.Micro"
   
   lifecycle {
-    create_before_destroy = false
+    create_before_destroy = true
+    replace_triggered_by = [
+      var.deployment_trigger
+    ]
   }
 
   create_vnic_details {
