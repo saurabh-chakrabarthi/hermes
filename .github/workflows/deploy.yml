@@ -32,12 +32,12 @@ jobs:
         
     - name: Run JUnit Tests
       if: |
-        contains(github.event.head_commit.modified, 'client/') ||
-        contains(github.event.head_commit.added, 'client/') ||
+        contains(github.event.head_commit.modified, 'payment-dashboard/') ||
+        contains(github.event.head_commit.added, 'payment-dashboard/') ||
         github.event_name == 'pull_request'
       run: |
         echo "🧪 Running JUnit tests..."
-        cd client
+        cd payment-dashboard
         mvn clean test
         
     - name: Upload Test Results
@@ -45,7 +45,7 @@ jobs:
       if: always()
       with:
         name: test-results
-        path: client/target/surefire-reports/
+        path: payment-dashboard/target/surefire-reports/
 
   # Test Node.js Server
   test-nodejs:
@@ -59,20 +59,9 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: server/package-lock.json
-        
-    - name: Install dependencies
-      working-directory: ./server
-      run: npm ci
       
-    - name: Run tests
-      if: |
-        contains(github.event.head_commit.modified, 'server/') ||
-        contains(github.event.head_commit.added, 'server/') ||
-        github.event_name == 'pull_request'
-      working-directory: ./server
-      run: npm test || echo "No tests defined yet"
+    - name: Skip Node.js tests
+      run: echo "✅ No Node.js services to test in new architecture"
 
   # Build and Push Docker Images
   build-images:
@@ -98,39 +87,56 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Extract metadata for payment-server
-      id: meta-server
+    - name: Extract metadata for payment-portal
+      id: meta-portal
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-server
+        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-portal
         tags: |
           type=raw,value=latest
           type=sha,prefix={{branch}}-
     
-    - name: Build and push payment-server
+    - name: Build and push payment-portal
       uses: docker/build-push-action@v5
       with:
-        context: ./server
+        context: ./payment-portal
         push: true
-        tags: ${{ steps.meta-server.outputs.tags }}
-        labels: ${{ steps.meta-server.outputs.labels }}
+        tags: ${{ steps.meta-portal.outputs.tags }}
+        labels: ${{ steps.meta-portal.outputs.labels }}
     
     - name: Extract metadata for payment-dashboard
       id: meta-dashboard
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-dashboard-micronaut
+        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-dashboard
         tags: |
           type=raw,value=latest
           type=sha,prefix={{branch}}-
     
-    - name: Build and push payment-dashboard (Micronaut)
+    - name: Build and push payment-dashboard
       uses: docker/build-push-action@v5
       with:
-        context: ./dashboard
+        context: ./payment-dashboard
         push: true
         tags: ${{ steps.meta-dashboard.outputs.tags }}
         labels: ${{ steps.meta-dashboard.outputs.labels }}
+    
+    - name: Extract metadata for payment-redis-service
+      id: meta-redis-service
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-redis-service
+        tags: |
+          type=raw,value=latest
+          type=sha,prefix={{branch}}-
+    
+    - name: Build and push payment-redis-service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./payment-infra/payment-redis-service
+        push: true
+        tags: ${{ steps.meta-redis-service.outputs.tags }}
+        labels: ${{ steps.meta-redis-service.outputs.labels }}
 
   # Deploy Infrastructure and Application
   deploy:
@@ -213,32 +219,42 @@ jobs:
       run: |
         echo "Validating required secrets..."
         
-        if [ -z "${{ secrets.MONGODB_PASSWORD }}" ]; then
-          echo "❌ ERROR: MONGODB_PASSWORD secret is not set!"
-          exit 1
-        fi
-        
         if [ -z "${{ secrets.OCI_USER_OCID }}" ]; then
           echo "❌ ERROR: OCI_USER_OCID secret is not set!"
           exit 1
         fi
         
-        if [ -z "${{ secrets.MONGODB_CLUSTER }}" ]; then
-          echo "❌ ERROR: MONGODB_CLUSTER secret is not set!"
+        if [ -z "${{ secrets.OCI_FINGERPRINT }}" ]; then
+          echo "❌ ERROR: OCI_FINGERPRINT secret is not set!"
           exit 1
         fi
 
-        if [ -z "${{ secrets.MONGODB_USER }}" ]; then
-          echo "❌ ERROR: MONGODB_USER secret is not set!"
+        if [ -z "${{ secrets.OCI_TENANCY_OCID }}" ]; then
+          echo "❌ ERROR: OCI_TENANCY_OCID secret is not set!"
           exit 1
         fi
 
-        if [ -z "${{ secrets.MONGODB_DATABASE }}" ]; then
-          echo "❌ ERROR: MONGODB_DATABASE secret is not set!"
+        if [ -z "${{ secrets.OCI_REGION }}" ]; then
+          echo "❌ ERROR: OCI_REGION secret is not set!"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.OCI_PRIVATE_KEY }}" ]; then
+          echo "❌ ERROR: OCI_PRIVATE_KEY secret is not set!"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.OCI_COMPARTMENT_ID }}" ]; then
+          echo "❌ ERROR: OCI_COMPARTMENT_ID secret is not set!"
+          exit 1
+        fi
+
+        if [ -z "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
+          echo "❌ ERROR: SSH_PUBLIC_KEY secret is not set!"
           exit 1
         fi
         
-        echo "✅ All required secrets are set"
+        echo "✅ All required OCI secrets are set"
     
     - name: Check Instance Metadata
       id: check_instance
@@ -289,10 +305,6 @@ jobs:
         TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
         TF_VAR_compartment_id: ${{ secrets.OCI_COMPARTMENT_ID }}
         TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        TF_VAR_mongodb_password: ${{ secrets.MONGODB_PASSWORD }}
-        TF_VAR_mongodb_cluster: ${{ secrets.MONGODB_CLUSTER }}
-        TF_VAR_mongodb_user: ${{ secrets.MONGODB_USER }}
-        TF_VAR_mongodb_database: ${{ secrets.MONGODB_DATABASE }}
         TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
         TF_VAR_github_owner: ${{ github.repository_owner }}
         TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR || '0.0.0.0/0' }}
@@ -342,8 +354,8 @@ jobs:
         # Wait for health endpoint
         echo "Checking service health (up to 5 minutes)..."
         for i in {1..60}; do
-          echo "Attempt $i/60: Checking http://$INSTANCE_IP:9292/health"
-          if curl -f -m 5 http://$INSTANCE_IP:9292/health 2>/dev/null; then
+          echo "Attempt $i/60: Checking http://$INSTANCE_IP:8080/health"
+          if curl -f -m 5 http://$INSTANCE_IP:8080/health 2>/dev/null; then
             echo "✅ Services ready!"
             exit 0
           fi
@@ -353,51 +365,41 @@ jobs:
         echo "⚠️ Service did not start in time. Check logs manually:"
         echo "ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
         echo "docker ps"
-        echo "docker logs hermes-payment-server"
+        echo "docker logs payment-dashboard"
         exit 1
     
     - name: Health Check
       continue-on-error: true
       run: |
-        echo "=== Checking Node.js Server Health ==="
+        echo "=== Checking Dashboard Health ==="
         
-        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:9292/health || echo '{}')
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:9292/health)
+        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:8080/health || echo '{}')
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:8080/health)
         
         echo "HTTP Status: $HTTP_CODE"
         echo "Response:"
         echo $HEALTH_RESPONSE | jq . || echo "$HEALTH_RESPONSE"
         
         OVERALL_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.status' 2>/dev/null || echo "unknown")
-        MONGODB_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.services.mongodb.status' 2>/dev/null || echo "unknown")
-        MONGODB_ERROR=$(echo $HEALTH_RESPONSE | jq -r '.services.mongodb.error' 2>/dev/null || echo "null")
+        REDIS_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.components.redis.status' 2>/dev/null || echo "unknown")
         
         echo ""
         echo "=== Service Status ==="
         echo "Overall: $OVERALL_STATUS"
-        echo "MongoDB: $MONGODB_STATUS"
-        if [ "$MONGODB_ERROR" != "null" ]; then
-          echo "  ⚠️  MongoDB Error: $MONGODB_ERROR"
-          echo "  Note: Whitelist IP $INSTANCE_IP in MongoDB Atlas Network Access"
-        fi
+        echo "Redis: $REDIS_STATUS"
         
         echo ""
-        echo "=== Checking Micronaut Dashboard ==="
-        DASHBOARD_HEALTH=$(curl -s http://$INSTANCE_IP:8080/health || echo '{}')
-        echo $DASHBOARD_HEALTH | jq . || echo "$DASHBOARD_HEALTH"
+        echo "=== Checking Redis Service ==="
+        REDIS_HEALTH=$(curl -s http://$INSTANCE_IP:9090/health || echo '{}')
+        echo $REDIS_HEALTH | jq . || echo "$REDIS_HEALTH"
         
-        DASHBOARD_STATUS=$(echo $DASHBOARD_HEALTH | jq -r '.status' 2>/dev/null || echo "unknown")
+        REDIS_SERVICE_STATUS=$(echo $REDIS_HEALTH | jq -r '.status' 2>/dev/null || echo "unknown")
         
         echo ""
         echo "====================================="
         echo "✅ DEPLOYMENT COMPLETE!"
         echo "====================================="
-        echo "🔵 Payment Server: http://$INSTANCE_IP:9292 (Status: $HTTP_CODE)"
-        echo "🟢 Dashboard: http://$INSTANCE_IP:8080 (Status: $DASHBOARD_STATUS)"
-        echo "🗄️  MongoDB: $MONGODB_STATUS"
-        if [ "$MONGODB_STATUS" != "connected" ]; then
-          echo ""
-          echo "⚠️  ACTION REQUIRED: Whitelist IP $INSTANCE_IP in MongoDB Atlas"
-          echo "   Go to: MongoDB Atlas → Network Access → Add IP Address"
-        fi
+        echo "🟢 Dashboard: http://$INSTANCE_IP:8080 (Status: $HTTP_CODE)"
+        echo "🔵 Redis Service: http://$INSTANCE_IP:9090 (Status: $REDIS_SERVICE_STATUS)"
+        echo "📦 Portal API: http://$INSTANCE_IP (Status: $(curl -s -o /dev/null -w '%{http_code}' http://$INSTANCE_IP/))"
         echo "====================================="

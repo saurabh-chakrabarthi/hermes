@@ -21,22 +21,22 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Extract metadata for payment-server
-      id: meta-server
+    - name: Extract metadata for payment-portal
+      id: meta-portal
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-server
+        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-portal
         tags: |
           type=raw,value=latest
           type=sha,prefix={{branch}}-
     
-    - name: Build and push payment-server
+    - name: Build and push payment-portal
       uses: docker/build-push-action@v5
       with:
-        context: ./server
+        context: ./payment-portal
         push: true
-        tags: ${{ steps.meta-server.outputs.tags }}
-        labels: ${{ steps.meta-server.outputs.labels }}
+        tags: ${{ steps.meta-portal.outputs.tags }}
+        labels: ${{ steps.meta-portal.outputs.labels }}
     
     - name: Extract metadata for payment-dashboard
       id: meta-dashboard
@@ -50,15 +50,33 @@ jobs:
     - name: Build and push payment-dashboard
       uses: docker/build-push-action@v5
       with:
-        context: ./client
+        context: ./payment-dashboard
         push: true
         tags: ${{ steps.meta-dashboard.outputs.tags }}
         labels: ${{ steps.meta-dashboard.outputs.labels }}
+    
+    - name: Extract metadata for payment-redis-service
+      id: meta-redis-service
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/hermes-payment-redis-service
+        tags: |
+          type=raw,value=latest
+          type=sha,prefix={{branch}}-
+    
+    - name: Build and push payment-redis-service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./payment-infra/payment-redis-service
+        push: true
+        tags: ${{ steps.meta-redis-service.outputs.tags }}
+        labels: ${{ steps.meta-redis-service.outputs.labels }}
     
     - name: Summary
       run: |
         echo "✅ Docker images built and pushed successfully!"
         echo ""
         echo "📦 Images:"
-        echo "  - ghcr.io/${{ github.repository_owner }}/hermes-payment-server:latest"
+        echo "  - ghcr.io/${{ github.repository_owner }}/hermes-payment-portal:latest"
         echo "  - ghcr.io/${{ github.repository_owner }}/hermes-payment-dashboard:latest"
+        echo "  - ghcr.io/${{ github.repository_owner }}/hermes-payment-redis-service:latest"
