@@ -56,6 +56,7 @@ jobs:
         push: true
         tags: ${{ steps.meta-dashboard.outputs.tags }}
         labels: ${{ steps.meta-dashboard.outputs.labels }}
+        no-cache: true
     
     - name: Extract metadata for payment-redis-service
       id: meta-redis-service
