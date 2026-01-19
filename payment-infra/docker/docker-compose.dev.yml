@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: hermes-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  payment-redis-service:
+    build:
+      context: ../../payment-infra/payment-redis-service
+      dockerfile: Dockerfile
+    container_name: payment-redis-service
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_URI=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  payment-portal:
+    build:
+      context: ../../payment-portal
+      dockerfile: Dockerfile
+    container_name: payment-portal
+    ports:
+      - "9292:9292"
+    environment:
+      - PORT=9292
+      - REDIS_SERVICE_URL=http://payment-redis-service:8081
+    depends_on:
+      payment-redis-service:
+        condition: service_healthy
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9292/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  payment-dashboard:
+    build:
+      context: ../../payment-dashboard
+      dockerfile: Dockerfile
+    container_name: payment-dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_SERVICE_BASE_URL=http://payment-redis-service:8081
+    depends_on:
+      - payment-portal
+      - payment-redis-service
+    networks:
+      - payment-network
+
+networks:
+  payment-network:
+    driver: bridge
+
+volumes:
+  redis-data:

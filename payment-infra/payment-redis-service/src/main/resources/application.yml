@@ -1,0 +1,16 @@
+micronaut:
+  application:
+    name: payment-redis-service
+  server:
+    port: 8081
+  http:
+    client:
+      read-timeout: 30s
+
+redis:
+  uri: ${REDIS_URI:redis://redis:6379}
+  
+endpoints:
+  health:
+    enabled: true
+    sensitive: false

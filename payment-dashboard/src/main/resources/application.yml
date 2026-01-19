@@ -1,0 +1,19 @@
+micronaut:
+  application:
+    name: payment-dashboard
+  server:
+    port: 8080
+  views:
+    thymeleaf:
+      enabled: true
+  http:
+    client:
+      read-timeout: 30s
+
+redis-service:
+  base-url: ${REDIS_SERVICE_BASE_URL:http://payment-redis-service:8081}
+
+endpoints:
+  health:
+    enabled: true
+    sensitive: false

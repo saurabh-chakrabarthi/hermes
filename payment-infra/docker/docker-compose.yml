@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: hermes-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  payment-redis-service:
+    image: ghcr.io/${GITHUB_OWNER:-saurabh-chakrabarthi}/hermes-payment-redis-service:latest
+    container_name: hermes-payment-redis-service
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_URI=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  payment-server:
+    image: ghcr.io/${GITHUB_OWNER:-saurabh-chakrabarthi}/hermes-payment-portal:latest
+    container_name: hermes-payment-portal
+    ports:
+      - "9292:9292"
+    environment:
+      - PORT=9292
+      - NODE_ENV=production
+      - REDIS_SERVICE_URL=http://payment-redis-service:8081
+    depends_on:
+      payment-redis-service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9292/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  payment-dashboard:
+    image: ghcr.io/${GITHUB_OWNER:-saurabh-chakrabarthi}/hermes-payment-dashboard:latest
+    container_name: hermes-payment-dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_SERVICE_BASE_URL=http://payment-redis-service:8081
+    depends_on:
+      payment-server:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  redis-data:
