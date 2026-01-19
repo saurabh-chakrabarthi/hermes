@@ -2,10 +2,10 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY payment-portal/package*.json ./
 RUN npm install --omit=dev
 
-COPY . .
+COPY payment-portal .
 
 EXPOSE 9292
 
