@@ -1,10 +1,15 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy entire project structure to resolve parent POM
+# Copy parent POM first
 COPY pom.xml .
-COPY payment-dashboard ./payment-dashboard
-COPY payment-infra ./payment-infra
+
+# Copy the redis service module
+COPY payment-infra/payment-redis-service/pom.xml ./payment-infra/payment-redis-service/
+COPY payment-infra/payment-redis-service/src ./payment-infra/payment-redis-service/src
+
+# Copy dashboard module for dependency resolution
+COPY payment-dashboard/pom.xml ./payment-dashboard/
 
 # Build the redis service module
 RUN mvn clean package -pl payment-infra/payment-redis-service -DskipTests

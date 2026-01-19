@@ -19,8 +19,8 @@ services:
 
   payment-redis-service:
     build:
-      context: ../../payment-infra/payment-redis-service
-      dockerfile: Dockerfile
+      context: ../../../
+      dockerfile: payment-infra/payment-redis-service/Dockerfile
     container_name: payment-redis-service
     ports:
       - "8081:8081"
@@ -39,8 +39,8 @@ services:
 
   payment-portal:
     build:
-      context: ../../payment-portal
-      dockerfile: Dockerfile
+      context: ../../../
+      dockerfile: payment-portal/Dockerfile
     container_name: payment-portal
     ports:
       - "9292:9292"
@@ -60,8 +60,8 @@ services:
 
   payment-dashboard:
     build:
-      context: ../../payment-dashboard
-      dockerfile: Dockerfile
+      context: ../../../
+      dockerfile: payment-dashboard/Dockerfile
     container_name: payment-dashboard
     ports:
       - "8080:8080"
