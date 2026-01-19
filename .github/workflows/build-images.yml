@@ -34,6 +34,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./payment-portal
+        file: ./payment-portal/Dockerfile
         push: true
         tags: ${{ steps.meta-portal.outputs.tags }}
         labels: ${{ steps.meta-portal.outputs.labels }}
@@ -50,7 +51,8 @@ jobs:
     - name: Build and push payment-dashboard
       uses: docker/build-push-action@v5
       with:
-        context: ./payment-dashboard
+        context: .
+        file: ./payment-dashboard/Dockerfile
         push: true
         tags: ${{ steps.meta-dashboard.outputs.tags }}
         labels: ${{ steps.meta-dashboard.outputs.labels }}
@@ -67,7 +69,8 @@ jobs:
     - name: Build and push payment-redis-service
       uses: docker/build-push-action@v5
       with:
-        context: ./payment-infra/payment-redis-service
+        context: .
+        file: ./payment-infra/payment-redis-service/Dockerfile
         push: true
         tags: ${{ steps.meta-redis-service.outputs.tags }}
         labels: ${{ steps.meta-redis-service.outputs.labels }}
