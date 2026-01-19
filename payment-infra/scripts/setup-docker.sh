@@ -47,10 +47,13 @@ curl -fsSL "$REPO_URL/payment-infra/docker/docker-compose.yml" -o docker-compose
 
 # Create .env file from environment variables (passed by Terraform)
 cat > .env << EOF
-MONGODB_USER=${MONGODB_USER}
-MONGODB_PASSWORD=${MONGODB_PASSWORD}
-MONGODB_CLUSTER=${MONGODB_CLUSTER}
-MONGODB_DATABASE=${MONGODB_DATABASE}
+# Redis Configuration
+REDIS_URI=redis://redis:6379
+REDIS_SERVICE_URL=http://payment-redis-service:8081
+
+# Application Settings
+NODE_ENV=production
+PORT=9292
 EOF
 
 # Secure .env file

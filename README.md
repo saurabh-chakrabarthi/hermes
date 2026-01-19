@@ -592,6 +592,240 @@ For issues and feature requests, contact the development team.
 
 ---
 
+## Cleanup & Consolidation Status ✅
+
+Successfully completed a comprehensive code cleanup and documentation consolidation for the Hermes Payment Portal project.
+
+### Build System
+- ✅ Fixed all POM XML syntax errors
+- ✅ Removed non-existent dependencies
+- ✅ Centralized version management in parent POM
+
+### Code Organization
+- ✅ Removed obsolete directories (dashboard, client, server, infra/db)
+- ✅ Clear naming convention (payment-*)
+- ✅ Single, focused project structure
+
+### Documentation
+- ✅ Single source of truth (README.md)
+- ✅ No conflicting information
+- ✅ Comprehensive: 598 lines covering all aspects
+
+---
+
+## Discrepancies Found and Fixed ✅
+
+### GitHub Workflows (.github/workflows/)
+
+#### build-images.yml - FIXED
+**Issues Found:**
+- Referenced non-existent `/server/` directory
+- Used `/client/` instead of `/payment-dashboard/`
+- Missing payment-redis-service build
+- Image names referenced old `hermes-payment-server`
+
+**Changes Made:**
+- Updated to build `payment-portal` from `./payment-portal/`
+- Updated to build `payment-dashboard` from `./payment-dashboard/`
+- Added build for `payment-redis-service` from `./payment-infra/payment-redis-service/`
+- Updated registry images to match new service names
+
+#### deploy.yml - FIXED
+**Issues Found:**
+- JUnit tests checked for `client/` directory (doesn't exist)
+- Artifact path referenced `client/target/` instead of `payment-dashboard/target/`
+- Health check endpoint was `9292/health`
+- MongoDB health checks included (no longer in architecture)
+- Container log references: `hermes-payment-server` (doesn't exist)
+
+**Changes Made:**
+- Changed test trigger from `client/` → `payment-dashboard/`
+- Updated artifact path from `client/target/` → `payment-dashboard/target/`
+- Changed health check endpoint from `9292` → `8080` (Dashboard)
+- Removed all MongoDB status checks and diagnostics
+- Updated health check to show Dashboard and Redis Service endpoints
+
+### Docker Configuration (payment-infra/docker/)
+
+#### docker-compose.yml - FIXED
+**Issues Found:**
+- Service named `payment-server` instead of `payment-portal`
+- Dashboard depends on service name `payment-server`
+- Missing explicit `networks` definition
+
+**Changes Made:**
+- Renamed service `payment-server` → `payment-portal`
+- Updated Dashboard dependency from `payment-server` → `payment-portal`
+- Added explicit network configuration with `payment-network`
+
+**Current Status:** ✅ VERIFIED
+- Redis (6379 internal)
+- payment-redis-service (8081:8081)
+- payment-portal (9292:9292)
+- payment-dashboard (8080:8080)
+
+### Setup Scripts (payment-infra/scripts/)
+
+#### setup-docker.sh - FIXED
+**Issues Found:**
+- .env file creation referenced MongoDB environment variables
+
+**Changes Made:**
+- Replaced MongoDB variables with Redis configuration:
+  - REDIS_URI=redis://redis:6379
+  - REDIS_SERVICE_URL=http://payment-redis-service:8081
+  - NODE_ENV=production
+  - PORT=9292
+
+### Dockerfiles
+
+#### payment-portal/Dockerfile - FIXED
+**Issues Found:**
+- Used deprecated npm flag `--only=production` (removed in npm 7+)
+- `package-lock.json` was out of sync with `package.json`
+
+**Changes Made:**
+- Changed from `npm ci --only=production` → `npm install --omit=dev`
+- This allows regeneration of lock file to match current dependencies
+
+#### payment-dashboard/Dockerfile & payment-infra/payment-redis-service/Dockerfile
+- ✅ No changes needed - correctly configured
+
+### Architecture Verification
+
+**Service Discovery & Networking:**
+```
+Dashboard (8080)
+   ↓ queries
+Redis Service (8081) → Payment Portal (9292)
+   ↓ queries
+Redis DB (6379)
+
+Port 80 (external) → Payment Portal (9292)
+```
+
+**Environment Variables Verification:**
+- ✅ payment-portal/server.js: PORT=9292, REDIS_SERVICE_URL correct
+- ✅ payment-dashboard: Configured to communicate with Redis service
+- ✅ payment-redis-service: REDIS_URI=redis://redis:6379, health endpoint on 8081
+
+### Summary of Fixed Files
+
+| File | Issue Type | Status |
+|------|-----------|--------|
+| `.github/workflows/build-images.yml` | Old directory references | ✅ FIXED |
+| `.github/workflows/deploy.yml` | Old ports, MongoDB checks | ✅ FIXED |
+| `payment-infra/docker/docker-compose.yml` | Service naming mismatch | ✅ FIXED |
+| `payment-infra/scripts/setup-docker.sh` | MongoDB env vars | ✅ FIXED |
+| `payment-portal/Dockerfile` | Deprecated npm flag | ✅ FIXED |
+
+---
+
+## Security Configuration
+
+### Network Security
+
+#### Ingress Rules (Inbound Traffic)
+
+| Port | Protocol | Source | Purpose |
+|------|----------|--------|---------|
+| 22 | TCP | `var.allowed_ssh_cidr` | SSH access (restricted) |
+| 8080 | TCP | `var.allowed_web_cidr` | Dashboard access (restricted) |
+| 9292 | TCP | `var.allowed_web_cidr` | Payment API access (restricted) |
+
+#### Egress Rules (Outbound Traffic)
+
+| Port | Protocol | Destination | Purpose |
+|------|----------|-------------|---------|
+| 443 | TCP | `0.0.0.0/0` | HTTPS (updates) |
+| 80 | TCP | `0.0.0.0/0` | HTTP (package updates) |
+| 53 | UDP | `0.0.0.0/0` | DNS resolution |
+
+### Configuration Variables
+
+Security variables can be configured in three ways (in order of precedence):
+
+#### 1. GitHub Secrets (Recommended for CI/CD)
+```
+ALLOWED_SSH_CIDR=<your_ip_range>
+ALLOWED_WEB_CIDR=<your_ip_range>
+```
+
+#### 2. terraform.tfvars File (Local Development)
+```hcl
+allowed_ssh_cidr = "<your_ip_range>"
+allowed_web_cidr = "<your_ip_range>"
+```
+
+#### 3. Default Values (Insecure - Not Recommended)
+Defaults to `0.0.0.0/0` (allows all IPs) if not configured.
+
+### Example Security Configurations
+
+**Option 1: Exact IP (Most Secure)**
+```hcl
+allowed_ssh_cidr = "<your_ip>/32"   # Your current public IP
+allowed_web_cidr = "<your_ip>/32"
+```
+Get your IP: `curl ifconfig.me`
+
+**Option 2: ISP Range (Handles IP Changes)**
+```hcl
+allowed_ssh_cidr = "<your_isp_range>/16"
+allowed_web_cidr = "<your_isp_range>/16"
+```
+
+**Option 3: Office Network Access**
+```hcl
+allowed_ssh_cidr = "98.207.254.0/24"
+allowed_web_cidr = "98.207.254.0/24"
+```
+
+### Dynamic IP Solutions
+
+**Problem:** Your ISP IP changes frequently
+
+**Solution 1:** Use ISP IP Range
+```bash
+whois $(curl -s ifconfig.me)  # Find your ISP's IP range
+```
+
+**Solution 2:** Automated IP Update
+```bash
+#!/bin/bash
+CURRENT_IP=$(curl -s ifconfig.me)
+gh secret set ALLOWED_SSH_CIDR --body "$CURRENT_IP/32"
+gh secret set ALLOWED_WEB_CIDR --body "$CURRENT_IP/32"
+gh workflow run deploy.yml
+```
+
+**Solution 3:** VPN with Static IP
+Use a VPN service to get a static IP address.
+
+### Security Best Practices
+
+1. **IP Whitelisting**
+   - Never use `0.0.0.0/0` for production systems
+   - Use the smallest CIDR block possible
+   - Regularly review and update allowed IPs
+
+2. **SSH Security**
+   - Use key-based authentication only
+   - Disable password authentication
+   - Consider using a bastion host
+
+3. **Web Access**
+   - Consider using a CDN/WAF for protection
+   - Implement rate limiting at application level
+   - Use HTTPS in production (add SSL termination)
+
+4. **Monitoring**
+   - Enable OCI logging for security events
+   - Monitor failed authentication attempts
+   - Set up alerts for unusual traffic patterns
+
+---
+
 **Last Updated**: January 18, 2026  
 **Version**: 2.0.0  
 **Status**: Production Ready (Optimized for 1GB VM)

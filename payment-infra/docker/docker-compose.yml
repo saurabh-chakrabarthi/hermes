@@ -33,7 +33,7 @@ services:
       retries: 3
       start_period: 40s
 
-  payment-server:
+  payment-portal:
     image: ghcr.io/${GITHUB_OWNER:-saurabh-chakrabarthi}/hermes-payment-portal:latest
     container_name: hermes-payment-portal
     ports:
@@ -61,7 +61,7 @@ services:
     environment:
       - REDIS_SERVICE_BASE_URL=http://payment-redis-service:8081
     depends_on:
-      payment-server:
+      payment-portal:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -70,6 +70,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+networks:
+  default:
+    name: payment-network
 
 volumes:
   redis-data:
