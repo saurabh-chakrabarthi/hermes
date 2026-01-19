@@ -27,7 +27,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PAYMENT_SERVER_URL=http://payment-server:9292
+      - PAYMENT_SERVER_BASE_URL=http://payment-server:9292
     depends_on:
       payment-server:
         condition: service_healthy
