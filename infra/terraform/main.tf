@@ -30,31 +30,6 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.compartment_id
 }
 
-# Check for existing instances
-data "oci_core_instances" "existing_instances" {
-  compartment_id = var.compartment_id
-  display_name   = "hermes-payment-portal"
-  state          = "RUNNING"
-}
-
-# Get VNIC attachments for existing instance
-data "oci_core_vnic_attachments" "existing_vnic_attachments" {
-  compartment_id = var.compartment_id
-  instance_id    = length(data.oci_core_instances.existing_instances.instances) > 0 ? data.oci_core_instances.existing_instances.instances[0].id : null
-}
-
-# Get VNIC details for existing instance
-data "oci_core_vnic" "existing_vnic" {
-  count   = length(data.oci_core_vnic_attachments.existing_vnic_attachments.vnic_attachments) > 0 ? 1 : 0
-  vnic_id = data.oci_core_vnic_attachments.existing_vnic_attachments.vnic_attachments[0].vnic_id
-}
-
-# Only create instance if none exists
-locals {
-  should_create_instance = length(data.oci_core_instances.existing_instances.instances) == 0
-  existing_public_ip     = length(data.oci_core_vnic.existing_vnic) > 0 ? data.oci_core_vnic.existing_vnic[0].public_ip_address : ""
-}
-
 # Get Ubuntu image
 data "oci_core_images" "ubuntu_images" {
   compartment_id           = var.compartment_id
@@ -86,9 +61,6 @@ resource "oci_core_instance" "hermes_instance" {
   
   lifecycle {
     create_before_destroy = true
-    replace_triggered_by = [
-      var.deployment_trigger
-    ]
   }
 
   create_vnic_details {
@@ -105,7 +77,7 @@ resource "oci_core_instance" "hermes_instance" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    deployment_trigger  = var.deployment_trigger
+    deployment_trigger  = var.deployment_trigger  # Changing this forces instance replacement
     user_data = base64encode(templatefile("${path.module}/../scripts/setup-docker.sh", {
       GITHUB_OWNER      = var.github_owner
       GITHUB_TOKEN      = var.github_token

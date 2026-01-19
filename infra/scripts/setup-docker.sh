@@ -53,6 +53,9 @@ MONGODB_CLUSTER=${MONGODB_CLUSTER}
 MONGODB_DATABASE=${MONGODB_DATABASE}
 EOF
 
+# Secure .env file
+chmod 600 .env
+
 # Set ownership
 chown -R ubuntu:ubuntu /home/ubuntu/app
 
