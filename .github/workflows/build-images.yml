@@ -33,11 +33,12 @@ jobs:
     - name: Build and push payment-portal
       uses: docker/build-push-action@v5
       with:
-        context: ./payment-portal
-        file: ./payment-portal/Dockerfile
+        context: .
+        file: ./Dockerfile
         push: true
         tags: ${{ steps.meta-portal.outputs.tags }}
         labels: ${{ steps.meta-portal.outputs.labels }}
+        target: payment-portal
     
     - name: Extract metadata for payment-dashboard
       id: meta-dashboard

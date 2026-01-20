@@ -29,3 +29,12 @@ FROM eclipse-temurin:17-alpine AS payment-redis-service
 WORKDIR /app
 COPY --from=builder /app/payment-infra/payment-redis-service/target/*.jar app.jar
 CMD ["java", "-jar", "app.jar"]
+
+# Stage 4: Create the image for payment-portal
+# To build, run: docker build -t payment-portal --target payment-portal .
+FROM node:18-alpine AS payment-portal
+WORKDIR /app
+COPY payment-portal/package*.json ./
+RUN npm install
+COPY payment-portal/ ./
+CMD ["node", "server.js"]
