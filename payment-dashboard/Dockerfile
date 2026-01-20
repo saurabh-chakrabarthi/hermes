@@ -1,11 +1,14 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy entire project
-COPY . .
+# Copy parent POM and modules for Maven to resolve dependencies
+COPY pom.xml .
+COPY payment-dashboard ./payment-dashboard
+COPY payment-infra ./payment-infra
+COPY dashboard ./dashboard
 
-# Build the entire project (parent POM will be resolved correctly)
-RUN mvn clean package -DskipTests
+# Build the payment-dashboard module
+RUN mvn clean package -DskipTests -pl payment-dashboard
 
 FROM eclipse-temurin:17
 WORKDIR /app
