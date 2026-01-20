@@ -52,12 +52,12 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ${{ github.workspace }}/Dockerfile
-        target: payment-dashboard
+        file: ./Dockerfile
         push: true
         tags: ${{ steps.meta-dashboard.outputs.tags }}
         labels: ${{ steps.meta-dashboard.outputs.labels }}
         no-cache: true
+        target: payment-dashboard
     
     - name: Extract metadata for payment-redis-service
       id: meta-redis-service
@@ -72,11 +72,11 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ${{ github.workspace }}/Dockerfile
-        target: payment-redis-service
+        file: ./Dockerfile
         push: true
         tags: ${{ steps.meta-redis-service.outputs.tags }}
         labels: ${{ steps.meta-redis-service.outputs.labels }}
+        target: payment-redis-service
     
     - name: Summary
       run: |
