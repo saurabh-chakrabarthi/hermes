@@ -52,7 +52,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./payment-infra/Dockerfile
+        file: ./payment-dashboard/Dockerfile
         push: true
         tags: ${{ steps.meta-dashboard.outputs.tags }}
         labels: ${{ steps.meta-dashboard.outputs.labels }}

@@ -13,8 +13,8 @@ RUN mvn dependency:go-offline
 # Copy the rest of the source code
 COPY . .
 
-# Build only the payment-redis-service module
-RUN mvn -pl payment-infra/payment-redis-service -am clean package -DskipTests
+# Build only the payment-dashboard module
+RUN mvn -pl payment-dashboard -am clean package -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:17-alpine
@@ -24,8 +24,8 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
 # Copy the built application from the build stage
-COPY --from=build /app/payment-infra/payment-redis-service/target/payment-redis-service-1.0.0.jar app.jar
+COPY --from=build /app/payment-dashboard/target/payment-dashboard-1.0.0.jar app.jar
 
 # Expose port and run
-EXPOSE 8081
+EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
