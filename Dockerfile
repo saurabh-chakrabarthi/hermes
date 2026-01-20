@@ -20,14 +20,18 @@ RUN mvn -B -f pom.xml clean package -DskipTests
 # To build, run: docker build -t payment-dashboard --target payment-dashboard .
 FROM eclipse-temurin:17-alpine AS payment-dashboard
 WORKDIR /app
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/payment-dashboard/target/*.jar app.jar
+EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
 
 # Stage 3: Create the image for payment-redis-service
 # To build, run: docker build -t payment-redis-service --target payment-redis-service .
 FROM eclipse-temurin:17-alpine AS payment-redis-service
 WORKDIR /app
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/payment-infra/payment-redis-service/target/*.jar app.jar
+EXPOSE 8081
 CMD ["java", "-jar", "app.jar"]
 
 # Stage 4: Create the image for payment-portal
@@ -35,6 +39,7 @@ CMD ["java", "-jar", "app.jar"]
 FROM node:18-alpine AS payment-portal
 WORKDIR /app
 COPY payment-portal/package*.json ./
-RUN npm install
+RUN npm install --omit=dev
 COPY payment-portal/ ./
+EXPOSE 9292
 CMD ["node", "server.js"]
