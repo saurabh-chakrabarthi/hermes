@@ -14,12 +14,6 @@ variable "ssh_public_key" {
   type        = string
 }
 
-variable "mongodb_password" {
-  description = "MongoDB password"
-  type        = string
-  sensitive   = true
-}
-
 variable "user_ocid" {
   description = "OCI user OCID"
   type        = string
@@ -56,47 +50,6 @@ variable "github_token" {
   description = "GitHub token for container registry"
   type        = string
   sensitive   = true
-}
-
-variable "mongodb_user" {
-  description = "MongoDB username"
-  type        = string
-}
-
-variable "mongodb_cluster" {
-  description = "MongoDB cluster host"
-  type        = string
-}
-
-variable "mongodb_database" {
-  description = "MongoDB database name"
-  type        = string
-}
-
-variable "atlas_public_key" {
-  description = "MongoDB Atlas API public key (optional, for provisioning via Terraform)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "atlas_private_key" {
-  description = "MongoDB Atlas API private key (optional, for provisioning via Terraform)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "atlas_project_id" {
-  description = "MongoDB Atlas project id (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "hermes_static_ip" {
-  description = "Static IP for the Hermes deployment (used to whitelist in Atlas). Provide without /32."
-  type        = string
-  default     = ""
 }
 
 # Security variables for network access control

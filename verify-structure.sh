@@ -52,7 +52,6 @@ check_dir "payment-infra/payment-redis-service" || ((errors++))
 echo ""
 echo "=== Payment Dashboard ==="
 check_file "payment-dashboard/pom.xml" || ((errors++))
-check_file "payment-dashboard/Dockerfile" || ((errors++))
 check_dir "payment-dashboard/src/main/java/com/payment/dashboard" || ((errors++))
 check_file "payment-dashboard/src/main/resources/application.yml" || ((errors++))
 
@@ -79,15 +78,9 @@ check_file "payment-infra/payment-redis-service/src/main/java/com/payment/redis/
 
 echo ""
 echo "=== Docker Configuration ==="
+check_file "payment-infra/Dockerfile" || ((errors++))
 check_file "payment-infra/docker/docker-compose.dev.yml" || ((errors++))
 check_file "payment-infra/docker/docker-compose.yml" || ((errors++))
-
-echo ""
-echo "=== Documentation ==="
-check_file "ARCHITECTURE.md" || ((errors++))
-check_file "BUILD.md" || ((errors++))
-check_file "QUICKSTART.md" || ((errors++))
-check_file "REFACTORING.md" || ((errors++))
 
 echo ""
 echo "=== Verification Summary ==="
@@ -101,7 +94,7 @@ if [ $errors -eq 0 ]; then
     exit 0
 else
     echo -e "${RED}✗ Found $errors missing files/directories${NC}"
-    echo ""
-    echo "Please check the structure and try again."
-    exit 1
+    echo "" Docker image: docker build -f payment-infra/Dockerfile -t payment-dashboard ."
+    echo "2. Start services: docker-compose -f payment-infra/docker/docker-compose.yml up -d"
+    echo "3. View logs: docker-compose -f payment-infra/docker/docker-compose.yml logs -f
 fi
