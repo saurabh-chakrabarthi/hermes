@@ -45,6 +45,7 @@ errors=0
 
 echo "=== Core Structure ==="
 check_file "pom.xml" || ((errors++))
+check_file "Dockerfile" || ((errors++))
 check_dir "payment-dashboard" || ((errors++))
 check_dir "payment-portal" || ((errors++))
 check_dir "payment-infra/payment-redis-service" || ((errors++))
@@ -64,21 +65,11 @@ check_file "payment-portal/Dockerfile" || ((errors++))
 echo ""
 echo "=== Payment Redis Service ==="
 check_file "payment-infra/payment-redis-service/pom.xml" || ((errors++))
-check_file "payment-infra/payment-redis-service/Dockerfile" || ((errors++))
 check_dir "payment-infra/payment-redis-service/src/main/java/com/payment/redis" || ((errors++))
 check_file "payment-infra/payment-redis-service/src/main/resources/application.yml" || ((errors++))
 
 echo ""
-echo "=== Redis Service Components ==="
-check_file "payment-infra/payment-redis-service/src/main/java/com/payment/redis/Application.java" || ((errors++))
-check_file "payment-infra/payment-redis-service/src/main/java/com/payment/redis/controller/TransactionController.java" || ((errors++))
-check_file "payment-infra/payment-redis-service/src/main/java/com/payment/redis/service/TransactionService.java" || ((errors++))
-check_file "payment-infra/payment-redis-service/src/main/java/com/payment/redis/repository/TransactionRepository.java" || ((errors++))
-check_file "payment-infra/payment-redis-service/src/main/java/com/payment/redis/domain/Transaction.java" || ((errors++))
-
-echo ""
 echo "=== Docker Configuration ==="
-check_file "payment-infra/Dockerfile" || ((errors++))
 check_file "payment-infra/docker/docker-compose.dev.yml" || ((errors++))
 check_file "payment-infra/docker/docker-compose.yml" || ((errors++))
 
@@ -87,14 +78,12 @@ echo "=== Verification Summary ==="
 if [ $errors -eq 0 ]; then
     echo -e "${GREEN}✓ All checks passed!${NC}"
     echo ""
-    echo "Project structure is correct. You can now:"
-    echo "1. Build: mvn clean install"
-    echo "2. Test: cd payment-infra/docker && docker-compose -f docker-compose.dev.yml up -d"
-    echo "3. Review: Open QUICKSTART.md for quick commands"
+    echo "Project structure is correct. To run the development environment:"
+    echo "1. Go to the docker directory: cd payment-infra/docker"
+    echo "2. Start all services: docker compose -f docker-compose.dev.yml up --build -d"
     exit 0
 else
-    echo -e "${RED}✗ Found $errors missing files/directories${NC}"
-    echo "" Docker image: docker build -f payment-infra/Dockerfile -t payment-dashboard ."
-    echo "2. Start services: docker-compose -f payment-infra/docker/docker-compose.yml up -d"
-    echo "3. View logs: docker-compose -f payment-infra/docker/docker-compose.yml logs -f
+    echo -e "${RED}✗ Found $errors missing files/directories.${NC}"
+    echo "Please ensure all the files listed above are present before proceeding."
+    exit 1
 fi
