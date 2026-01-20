@@ -44,7 +44,7 @@ variable "tenancy_ocid" {
 variable "deployment_trigger" {
   description = "Trigger to force instance replacement"
   type        = string
-  default     = "9"
+  default     = "10"
 }
 
 variable "github_owner" {
