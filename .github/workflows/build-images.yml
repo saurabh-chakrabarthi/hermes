@@ -25,7 +25,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: ./Dockerfile
+        file: ./Dockerfile
         push: true
         target: payment-portal
         tags: |
@@ -36,7 +36,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: ./Dockerfile
+        file: ./Dockerfile
         push: true
         target: payment-dashboard
         tags: |
@@ -47,7 +47,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: ./Dockerfile
+        file: ./Dockerfile
         push: true
         target: payment-redis-service
         tags: |
