@@ -25,9 +25,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./payment-portal/Dockerfile
         push: true
-        target: payment-portal
         tags: |
           ghcr.io/${{ github.repository_owner }}/hermes-payment-portal:latest
           ghcr.io/${{ github.repository_owner }}/hermes-payment-portal:${{ github.ref_name }}-${{ github.sha }}
@@ -36,9 +35,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./payment-dashboard/Dockerfile
         push: true
-        target: payment-dashboard
         tags: |
           ghcr.io/${{ github.repository_owner }}/hermes-payment-dashboard:latest
           ghcr.io/${{ github.repository_owner }}/hermes-payment-dashboard:${{ github.ref_name }}-${{ github.sha }}
@@ -47,9 +45,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./payment-infra/payment-redis-service/Dockerfile
         push: true
-        target: payment-redis-service
         tags: |
           ghcr.io/${{ github.repository_owner }}/hermes-payment-redis-service:latest
           ghcr.io/${{ github.repository_owner }}/hermes-payment-redis-service:${{ github.ref_name }}-${{ github.sha }}
