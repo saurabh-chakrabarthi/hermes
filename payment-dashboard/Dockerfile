@@ -4,16 +4,16 @@ WORKDIR /app
 
 COPY . .
 
-RUN mvn -B -pl payment-dashboard -am clean package -DskipTests
+RUN mvn -B clean package -pl payment-dashboard -am -DskipTests
 
 # Runtime stage
-FROM eclipse-temurin:17-alpine
+FROM eclipse-temurin:17
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/payment-dashboard/target/payment-dashboard-1.0.0.jar app.jar
+COPY --from=builder /app/payment-dashboard/target/payment-dashboard-*.jar app.jar
 
 EXPOSE 8080
 
