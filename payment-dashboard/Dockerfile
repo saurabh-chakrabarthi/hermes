@@ -4,7 +4,10 @@ WORKDIR /app
 
 COPY . .
 
-# Build entire project from root - Maven will handle all modules and dependencies
+# Phase 1: Install parent POM into local Maven repository
+RUN mvn -B install -N -DskipTests -f pom.xml
+
+# Phase 2: Build entire project with parent now available
 RUN mvn -B clean package -DskipTests
 
 # Runtime stage
