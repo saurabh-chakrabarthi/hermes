@@ -4,11 +4,8 @@ WORKDIR /app
 
 COPY . .
 
-# Install parent POM to local Maven repository (-f = explicit root pom.xml, -N = non-recursive, only parent)
-RUN mvn -B -f pom.xml install -N -DskipTests
-
-# Build only the payment-dashboard module
-RUN mvn -B -f payment-dashboard/pom.xml clean package -DskipTests
+# Build entire project from root - Maven will handle all modules and dependencies
+RUN mvn -B clean package -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:17
