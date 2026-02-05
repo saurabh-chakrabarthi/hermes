@@ -4,10 +4,6 @@ terraform {
       source  = "oracle/oci"
       version = "~> 5.0"
     }
-    mongodbatlas = {
-      source  = "mongodb/mongodbatlas"
-      version = "~> 1.4"
-    }
   }
   
   backend "local" {
@@ -81,10 +77,6 @@ resource "oci_core_instance" "hermes_instance" {
     user_data = base64encode(templatefile("${path.module}/../scripts/setup-docker.sh", {
       GITHUB_OWNER      = var.github_owner
       GITHUB_TOKEN      = var.github_token
-      MONGODB_PASSWORD  = var.mongodb_password
-      MONGODB_USER      = var.mongodb_user
-      MONGODB_CLUSTER   = var.mongodb_cluster
-      MONGODB_DATABASE  = var.mongodb_database
     }))
   }
 
