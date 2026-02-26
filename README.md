@@ -351,9 +351,29 @@ rm -rf ~/.m2/repository
 mvn clean install
 ```
 
-## Docker Deployment
+## Deployment
 
-### Development (with Docker Compose)
+### CI/CD (Automated)
+
+Push to `main` triggers:
+1. Build & test Java/Node.js services
+2. Build & push Docker images to GHCR
+3. Terraform provisions/updates OCI VM
+4. Cloud-init installs Docker and starts containers
+5. Health check verifies deployment
+
+**Required GitHub Secrets:**
+- `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_TENANCY_OCID`, `OCI_REGION`, `OCI_PRIVATE_KEY`, `OCI_COMPARTMENT_ID`
+- `SSH_PUBLIC_KEY` - For VM SSH access
+- `ALLOWED_SSH_CIDR`, `ALLOWED_WEB_CIDR` - IP restrictions (optional)
+- `GITHUB_TOKEN` - Auto-provided for GHCR
+
+**Port Allocation:**
+- Dashboard: `8080`
+- Payment Portal: `9292`
+- Redis Service: `8081`
+
+### Local Development (Docker Compose)
 
 ```bash
 cd payment-infra/docker
@@ -374,7 +394,7 @@ docker-compose -f docker-compose.dev.yml logs -f dashboard
 docker-compose -f docker-compose.dev.yml logs -f portal
 ```
 
-### Production Deployment
+### Manual Production Deployment (Optional)
 
 ```bash
 docker-compose -f docker-compose.yml up -d
@@ -384,6 +404,16 @@ Requires environment variables:
 ```bash
 export GITHUB_OWNER=your-github-username
 docker-compose -f docker-compose.yml up -d
+```
+
+### Terraform (Infrastructure Provisioning)
+
+```bash
+cd payment-infra/terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with OCI credentials
+terraform init
+terraform apply
 ```
 
 ## Environment Variables

@@ -138,16 +138,14 @@ jobs:
         tags: ${{ steps.meta-redis-service.outputs.tags }}
         labels: ${{ steps.meta-redis-service.outputs.labels }}
 
-  # Deploy Infrastructure and Application
+  # Deploy to Shared VM
   deploy:
-    name: "🚀 Deploy to OCI"
+    name: "🚀 Deploy to Shared VM"
     runs-on: ubuntu-latest
     needs: [build-images]
     if: |
       github.ref == 'refs/heads/main' && 
-      github.event_name == 'push' &&
-      always() &&
-      (needs.build-images.result == 'success' || needs.build-images.result == 'skipped')
+      github.event_name == 'push'
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -156,144 +154,6 @@ jobs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.6.0
-    
-    - name: Setup OCI CLI
-      run: |
-        curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
-        export PATH="$HOME/bin:$PATH"
-        echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
-        
-        # Create OCI config
-        mkdir -p ~/.oci
-        cat > ~/.oci/config << EOF
-        [DEFAULT]
-        user=${{ secrets.OCI_USER_OCID }}
-        fingerprint=${{ secrets.OCI_FINGERPRINT }}
-        tenancy=${{ secrets.OCI_TENANCY_OCID }}
-        region=${{ secrets.OCI_REGION }}
-        key_file=$HOME/.oci/key.pem
-        EOF
-        
-        # Create private key file (handle potential formatting issues)
-        echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/key.pem
-        chmod 600 ~/.oci/key.pem
-        
-        # Validate private key format
-        echo "Private key validation:"
-        head -1 ~/.oci/key.pem
-        tail -1 ~/.oci/key.pem
-        wc -l ~/.oci/key.pem
-        
-        # Verify setup
-        echo "OCI CLI version:"
-        oci --version
-        echo "Config file:"
-        cat ~/.oci/config
-        echo "Key file permissions:"
-        ls -la ~/.oci/key.pem
-        
-        # Test OCI authentication
-        echo "Testing OCI authentication:"
-        oci iam compartment get --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} || echo "Auth test failed"
-    
-    - name: Cleanup Old Resources
-      run: |
-        export PATH="$HOME/bin:$PATH"
-        echo "Cleaning up duplicate VCNs..."
-        
-        # Get all VCNs named hermes-vcn and delete them
-        VCN_IDS=$(oci network vcn list --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} --display-name "hermes-vcn" --query "data[].id" --raw-output 2>/dev/null || echo "")
-        
-        if [ ! -z "$VCN_IDS" ]; then
-          echo "Found duplicate hermes-vcn VCNs to delete"
-          for vcn_id in $VCN_IDS; do
-            echo "Deleting VCN: $vcn_id"
-            # Delete associated resources first, then VCN
-            oci network vcn delete --vcn-id $vcn_id --force --wait-for-state TERMINATED 2>/dev/null || echo "Failed to delete VCN $vcn_id"
-          done
-        else
-          echo "No duplicate VCNs found"
-        fi
-    
-    - name: Validate Secrets
-      run: |
-        echo "Validating required secrets..."
-        
-        if [ -z "${{ secrets.OCI_USER_OCID }}" ]; then
-          echo "❌ ERROR: OCI_USER_OCID secret is not set!"
-          exit 1
-        fi
-        
-        if [ -z "${{ secrets.OCI_FINGERPRINT }}" ]; then
-          echo "❌ ERROR: OCI_FINGERPRINT secret is not set!"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.OCI_TENANCY_OCID }}" ]; then
-          echo "❌ ERROR: OCI_TENANCY_OCID secret is not set!"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.OCI_REGION }}" ]; then
-          echo "❌ ERROR: OCI_REGION secret is not set!"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.OCI_PRIVATE_KEY }}" ]; then
-          echo "❌ ERROR: OCI_PRIVATE_KEY secret is not set!"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.OCI_COMPARTMENT_ID }}" ]; then
-          echo "❌ ERROR: OCI_COMPARTMENT_ID secret is not set!"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
-          echo "❌ ERROR: SSH_PUBLIC_KEY secret is not set!"
-          exit 1
-        fi
-        
-        echo "✅ All required OCI secrets are set"
-    
-    - name: Check Instance Metadata
-      id: check_instance
-      run: |
-        export PATH="$HOME/bin:$PATH"
-        echo "Checking existing instance metadata..."
-        
-        INSTANCE_ID=$(oci compute instance list \
-          --compartment-id ${{ secrets.OCI_COMPARTMENT_ID }} \
-          --display-name "hermes-payment-portal" \
-          --lifecycle-state RUNNING \
-          --query "data[0].id" \
-          --raw-output 2>/dev/null || echo "")
-        
-        if [ ! -z "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "null" ]; then
-          echo "Found existing instance: $INSTANCE_ID"
-          
-          # Get current deployment_trigger from instance metadata
-          CURRENT_TRIGGER=$(oci compute instance get \
-            --instance-id $INSTANCE_ID \
-            --query 'data."metadata"."deployment_trigger"' \
-            --raw-output 2>/dev/null || echo "")
-          
-          echo "Current deployment_trigger: $CURRENT_TRIGGER"
-          echo "New deployment_trigger: 7"
-          
-          if [ "$CURRENT_TRIGGER" != "7" ]; then
-            echo "Deployment trigger changed - terminating instance..."
-            oci compute instance terminate --instance-id $INSTANCE_ID --force --wait-for-state TERMINATED
-            echo "✅ Instance terminated"
-            echo "recreate=true" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Instance already up to date"
-            echo "recreate=false" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "No existing instance found - will create new one"
-          echo "recreate=true" >> $GITHUB_OUTPUT
-        fi
     
     - name: Deploy Infrastructure
       working-directory: ./payment-infra/terraform
@@ -310,96 +170,24 @@ jobs:
         TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR || '0.0.0.0/0' }}
         TF_VAR_allowed_web_cidr: ${{ secrets.ALLOWED_WEB_CIDR || '0.0.0.0/0' }}
       run: |
-        export PATH="$HOME/bin:$PATH"
-
-        # Debug: Check if variables are set
-        echo "Checking Terraform variables:"
-        echo "User OCID: ${TF_VAR_user_ocid:0:20}..."
-        echo "Fingerprint: $TF_VAR_fingerprint"
-        echo "Tenancy OCID: ${TF_VAR_tenancy_ocid:0:20}..."
-        echo "Region: $TF_VAR_region"
-        echo "Private key first line: $(echo "$TF_VAR_private_key" | head -1)"
-        echo "Private key last line: $(echo "$TF_VAR_private_key" | tail -1)"
-        echo "Private key line count: $(echo "$TF_VAR_private_key" | wc -l)"
-
         terraform init
-        terraform plan
         terraform apply -auto-approve
         
-        # Get instance IP with error handling
-        echo "Extracting instance IP..."
-        terraform output -json
-        
-        INSTANCE_IP=$(terraform output -raw instance_public_ip 2>&1)
-        if [ -z "$INSTANCE_IP" ] || [ "$INSTANCE_IP" == "null" ]; then
-          echo "❌ ERROR: Failed to get instance IP from Terraform output"
-          echo "Terraform outputs:"
-          terraform output
-          exit 1
-        fi
-        
+        INSTANCE_IP=$(terraform output -raw instance_public_ip)
         echo "INSTANCE_IP=$INSTANCE_IP" >> $GITHUB_ENV
-        echo "✅ Terraform completed. Instance IP: $INSTANCE_IP"
+        echo "✅ Deployed to $INSTANCE_IP"
     
-    - name: Wait for Docker Services
+    - name: Wait for Services
       run: |
-        echo "Waiting for Docker installation and container startup..."
-        echo "Instance IP: $INSTANCE_IP"
-        echo "This may take 3-5 minutes (Docker install + image pull)"
-        
-        # Wait for cloud-init and Docker setup
-        echo "Waiting 2 minutes for Docker installation..."
+        echo "Waiting for services to start..."
         sleep 120
         
-        # Wait for health endpoint
-        echo "Checking service health (up to 5 minutes)..."
-        for i in {1..60}; do
-          echo "Attempt $i/60: Checking http://$INSTANCE_IP:8080/health"
-          if curl -f -m 5 http://$INSTANCE_IP:8080/health 2>/dev/null; then
-            echo "✅ Services ready!"
+        for i in {1..30}; do
+          if curl -fsS http://$INSTANCE_IP:8080/health >/dev/null 2>&1; then
+            echo "✅ Dashboard healthy"
             exit 0
           fi
           sleep 5
         done
-        
-        echo "⚠️ Service did not start in time. Check logs manually:"
-        echo "ssh -i ~/.ssh/hermes-pvt-key.key ubuntu@$INSTANCE_IP"
-        echo "docker ps"
-        echo "docker logs payment-dashboard"
+        echo "⚠️ Dashboard did not become healthy"
         exit 1
-    
-    - name: Health Check
-      continue-on-error: true
-      run: |
-        echo "=== Checking Dashboard Health ==="
-        
-        HEALTH_RESPONSE=$(curl -s http://$INSTANCE_IP:8080/health || echo '{}')
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$INSTANCE_IP:8080/health)
-        
-        echo "HTTP Status: $HTTP_CODE"
-        echo "Response:"
-        echo $HEALTH_RESPONSE | jq . || echo "$HEALTH_RESPONSE"
-        
-        OVERALL_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.status' 2>/dev/null || echo "unknown")
-        REDIS_STATUS=$(echo $HEALTH_RESPONSE | jq -r '.components.redis.status' 2>/dev/null || echo "unknown")
-        
-        echo ""
-        echo "=== Service Status ==="
-        echo "Overall: $OVERALL_STATUS"
-        echo "Redis: $REDIS_STATUS"
-        
-        echo ""
-        echo "=== Checking Redis Service ==="
-        REDIS_HEALTH=$(curl -s http://$INSTANCE_IP:9090/health || echo '{}')
-        echo $REDIS_HEALTH | jq . || echo "$REDIS_HEALTH"
-        
-        REDIS_SERVICE_STATUS=$(echo $REDIS_HEALTH | jq -r '.status' 2>/dev/null || echo "unknown")
-        
-        echo ""
-        echo "====================================="
-        echo "✅ DEPLOYMENT COMPLETE!"
-        echo "====================================="
-        echo "🟢 Dashboard: http://$INSTANCE_IP:8080 (Status: $HTTP_CODE)"
-        echo "🔵 Redis Service: http://$INSTANCE_IP:9090 (Status: $REDIS_SERVICE_STATUS)"
-        echo "📦 Portal API: http://$INSTANCE_IP (Status: $(curl -s -o /dev/null -w '%{http_code}' http://$INSTANCE_IP/))"
-        echo "====================================="
